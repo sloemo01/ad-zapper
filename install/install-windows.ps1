@@ -23,11 +23,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $Repo = 'sloemo01/ad-zapper'
 $Ref = 'main'
+$Rev = 'installer rev 3, 2026-09-22'
 $Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:LOCALAPPDATA 'Ad Zapper' }
 
 function Say($message) { Write-Host $message }
 
 Say "Ad Zapper installer"
+Say "  ($Rev)"
 Say ""
 
 # 1. Where does the extension come from?

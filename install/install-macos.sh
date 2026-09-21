@@ -20,6 +20,7 @@ set -euo pipefail
 
 REPO="sloemo01/ad-zapper"
 REF="main"
+REV="installer rev 3, 2026-09-22"
 TARGET="${AD_ZAPPER_DIR:-$HOME/Applications/Ad Zapper}"
 
 MODE="install"
@@ -35,6 +36,7 @@ done
 say() { printf '%s\n' "$*"; }
 
 say "Ad Zapper installer"
+say "  ($REV)"
 say ""
 
 # 1. Where does the extension come from?

@@ -11,12 +11,16 @@ ad-block walls before they render. Loads as-is, no build step for the extension 
 ### macOS
 
 ```
-curl -fsSL https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-macos.sh -o /tmp/ad-zapper.sh
+curl -fsSL https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper@main/install/install-macos.sh -o /tmp/ad-zapper.sh
 bash /tmp/ad-zapper.sh
 ```
 
 Piping straight into bash works too, but stdin is the script then, so the pause before the test
 page does not work: `curl -fsSL .../install-macos.sh | bash`.
+
+The script prints its own revision on the second line. That line matters if you fetch it
+immediately after a commit: `raw.githubusercontent.com` can serve a cached copy for a few minutes,
+which is why the jsDelivr URL above is listed first. The banner tells you which revision you got.
 
 ### Windows
 
