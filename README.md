@@ -1,68 +1,102 @@
 # Ad Zapper
 
-![tests](https://github.com/sloemo01/ad-zapper/actions/workflows/ci.yml/badge.svg)
+An ad blocker for Chrome. It blocks ads and trackers on every page, takes the ads out of YouTube
+videos, kills popup windows, hides empty ad slots, and removes the "turn off your ad blocker"
+screens that some sites put in front of the article.
 
-A Chrome extension (Manifest V3) that blocks ads and trackers on every page from the real filter
-lists, removes YouTube ads, kills popunder windows and ad loaders, hides ad slots, and rewrites
-ad-block walls before they render. Loads as-is, no build step for the extension itself.
+Nothing to sign up for. No account, no telemetry, nothing sent anywhere. MIT licensed.
+
+![tests](https://github.com/sloemo01/ad-zapper/actions/workflows/ci.yml/badge.svg)
 
 ## Install
 
-### macOS
+You need Chrome, on a Mac or a PC. Nothing else: no Git, no developer tools, no build step.
+
+Open Terminal on macOS or PowerShell on Windows, paste the line for your computer, press Enter.
+The script prepares everything around the one step Chrome will not let any program do for you.
+
+**macOS**
 
 ```
 curl -fsSL https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper@main/install/install-macos.sh -o /tmp/ad-zapper.sh
 bash /tmp/ad-zapper.sh
 ```
 
-Piping straight into bash works too, but stdin is the script then, so the pause before the test
-page does not work: `curl -fsSL .../install-macos.sh | bash`.
-
-The script prints its own revision on the second line. That line matters if you fetch it
-immediately after a commit: `raw.githubusercontent.com` can serve a cached copy for a few minutes,
-which is why the jsDelivr URL above is listed first. The banner tells you which revision you got.
-
-### Windows
+**Windows**
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-windows.ps1 -OutFile $env:TEMP\ad-zapper.ps1; & $env:TEMP\ad-zapper.ps1"
 ```
 
-There is also `install\install-windows.cmd` for double-clicking after a clone.
+On Windows there is also `install\install-windows.cmd` for double-clicking if you already have the
+folder.
 
-### What the script does with the folder
+### What the script does
 
-It works the same whether you cloned the repository or not. Inside a checkout it installs that
-folder. Anywhere else it downloads the newest `main` from GitHub, unpacks it into a folder that
-stays put (`~/Applications/Ad Zapper` on macOS, `%LOCALAPPDATA%\Ad Zapper` on Windows) and
-installs from there. Running it again replaces that folder with the newest version, which is how
-you update. Both scripts take `--dry-run` / `-DryRun` to report without downloading or touching
-Chrome, `--download` / `-Download` to force a fresh copy, and `--download-only` / `-DownloadOnly`
-to fetch and check the files and stop before Chrome.
+It downloads the extension into a folder that stays put (`~/Applications/Ad Zapper` on macOS,
+`%LOCALAPPDATA%\Ad Zapper` on Windows), checks that every file is there and that the filter files
+parse, copies the folder path to your clipboard, and opens Chrome's extension page. Chrome then
+needs four clicks from you:
 
-### What the scripts can and cannot do
+1. Turn on **Developer mode**, the switch at the top right.
+2. Click **Load unpacked**, top left. In the file dialog press Cmd+Shift+G on macOS or Ctrl+V on
+   Windows, paste, and press Open.
+3. Chrome lists the permissions it wants, **Debugger** among them. That one is what lets a layer
+   inspect requests on the sites that need it. Click **Add extension**.
+4. The card appears in the list. Pin the toolbar icon if you want the counter in view.
 
-Neither script finishes the job, because Chrome does not allow it: an unpacked extension is loaded
-by a person, and no supported API or installer can put one into a profile you are already signed
-into. What the scripts do is everything around that. They check that Chrome is where it should be,
-check that the checkout is complete and that the manifest and all ten rule sets parse, put the
-folder path on your clipboard, and open `chrome://extensions`. Then it is four steps:
+Press Enter in the terminal after that and it opens YouTube so you can watch the counter move.
 
-1. Developer mode, the toggle at the top right.
-2. Load unpacked, top left. In the file dialog press Cmd+Shift+G (macOS) or Ctrl+V (Windows),
-   paste, and press Open.
-3. Chrome shows a dialog listing what the extension can do, Debugger among the entries. That
-   permission is what lets one layer inspect requests on the sites that need it. Click Add
-   extension.
-4. The card appears. Pin the toolbar icon if you want the counter in view.
+Running the same command again is how you update. It replaces the folder with the newest version,
+and then you hit the reload arrow on the extension card so Chrome picks it up.
 
-The installer then waits, and once the card is showing you press Enter and it opens YouTube for
-you. What to look for there: the toolbar icon counts up as ads are stopped, DevTools
-(Cmd+Option+J, or Ctrl+Shift+J) shows `[yt-ad-zapper]` lines, and a bar under the address bar
-reads "Ad Zapper started debugging this browser" on the sites where the deep block attaches. That
-bar is the debugger permission in action, and it clears itself.
+### Two things that look alarming and are not
 
-After editing any file, hit the reload button on the extension card.
+A bar under the address bar on some sites, reading "Ad Zapper started debugging this browser". That
+is the Debugger permission doing its job on the sites that need per-request handling. It belongs to
+that one tab, it clears itself, and nothing about your traffic is recorded or sent anywhere.
+
+Chrome's warning that the extension can read and change your data on all websites. An ad blocker
+has to see the requests a page makes, and it works on every site by definition. If you would rather
+check than trust, all of the code is in this repository.
+
+### What you should see
+
+The toolbar icon counts up as ads are stopped. Open the popup for the page you are on: ads blocked,
+videos cleaned, popup ads killed, hosts blocked site-wide, what this extension remembers about the
+site, and the state of the deep block for that tab. On YouTube, DevTools (Cmd+Option+J, or
+Ctrl+Shift+J) prints `[yt-ad-zapper]` lines as ad fields get stripped.
+
+### Turning it off, and taking it out
+
+The switch at the top right of the popup, and off means off: Chrome's matching stops, all ten
+rulesets are disabled, the deep block detaches from every tab, and no CSS is injected anywhere.
+Flip it back and all of it returns.
+
+To remove the extension: **Remove** on its card in `chrome://extensions`, then delete the folder the
+script created.
+
+### If something goes wrong
+
+The installer prints its revision on the second line, so you can always tell which copy ran. If it
+stops saying "missing manifest.json", the download did not finish; run the same command again.
+Piping straight into `bash` works too, but stdin is the script then, so the pause before the test
+page does nothing.
+
+GitHub sometimes serves a cached copy of the script for a few minutes after a change, which is why
+the macOS line above points at jsDelivr. Whichever copy you get, the extension itself is always
+fetched fresh from the repository, so you get the newest version.
+
+### Why it is not in the Chrome Web Store
+
+Google does not allow the Debugger permission in store listings, and that permission is what makes
+the hardest sites work. So the extension installs unpacked instead, which is what those four clicks
+are for.
+
+## How it works
+
+Everything below this line is the technical detail: the seven layers, the filter lists, the memory
+cost, and the places where this cannot help. Skip it if you only want the ads gone.
 
 ## What it does
 
@@ -130,7 +164,7 @@ Seven layers, each covering what the one below cannot.
 
 One switch, top right of the panel, and it means off:
 
-- Chrome's matching stops. All five static rulesets are disabled through `updateEnabledRulesets`,
+- Chrome's matching stops. All ten rulesets are disabled through `updateEnabledRulesets`,
   and the dynamic rules learned from this browser are removed. They stay in storage and are put
   back on the way in.
 - The deep block is forced to `off` and every attached tab is detached.
