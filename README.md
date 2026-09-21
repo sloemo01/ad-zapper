@@ -47,8 +47,20 @@ needs four clicks from you:
 
 Press Enter in the terminal after that and it opens YouTube so you can watch the counter move.
 
-Running the same command again is how you update. It replaces the folder with the newest version,
-and then you hit the reload arrow on the extension card so Chrome picks it up.
+### It keeps itself up to date
+
+The installer also puts a small background job in place (a launchd agent on macOS, a scheduled task
+on Windows). Every six hours it fetches the newest version, and when there is something newer it
+swaps the folder and leaves a note in it saying which version is now there. The extension reads that
+note and reloads itself into it, so updates land without you doing anything.
+
+Chrome will not update an extension that did not come from the Web Store, which is the whole reason
+this exists. Two things worth knowing: the job only runs while the computer is on, and if an update
+ever adds a permission Chrome asks about, Chrome will disable the extension until you approve it.
+
+To see it: `install/autoupdate-macos.sh --status` (`-Status` on Windows) prints when it last ran and
+what the folder holds. `--run-now` does one pass immediately, `--remove` takes the job back out, and
+`--no-autoupdate` tells the installer to skip it in the first place.
 
 ### Two things that look alarming and are not
 
@@ -473,6 +485,9 @@ checks exercise them, and they are documented as such rather than hidden in a li
 | `src/popup-hosts.js` | generated popup host blocklist, packed, with its Bloom filter |
 | `src/relay.js` | isolated-world bridge: config down, reports up, hiding CSS in |
 | `src/wall-guard.js` | in-page wall defense: clears stored markers, removes a rendered wall, releases the scroll lock, bounces wall pages |
+| `src/update.js` | the self-updater: reads the version marker the background job writes into the folder, reloads the extension into a newer version once, and records a version it could not load as stuck instead of retrying forever |
+| `src/detect.js` | the generic ad detector: third-party hosts and ad-shaped elements on pages the registry has never seen, generalised into blocked hosts and hiding selectors |
+| `install/autoupdate-macos.sh` | registers, inspects, or removes the six-hourly launchd job that runs the installer's `--update-only` path |
 | `src/wall-main.js` | page-world switch: marker-shaped keys and cookies cannot be written |
 | `src/wall-hosts.js` | generated list of the hosts with response rules |
 | `src/deepblock.js` | automatic CDP attachment, request interception, response rewriting |

@@ -17,7 +17,9 @@
 param(
   [switch]$DryRun,
   [switch]$Download,
-  [switch]$DownloadOnly
+  [switch]$DownloadOnly,
+  [switch]$UpdateOnly,
+  [switch]$NoAutoUpdate
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +33,49 @@ function Say($message) { Write-Host $message }
 Say "Ad Zapper installer"
 Say "  ($Rev)"
 Say ""
+
+# -UpdateOnly is what the background task runs: fetch the newest source, compare it
+# with what is installed, swap only when it is newer, and leave a marker file in the
+# folder saying which version is now there. The extension reads that marker and
+# reloads itself into it. Chrome is never touched by this path.
+if ($UpdateOnly) {
+  $tmp = Join-Path $env:TEMP ("ad-zapper-" + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+  try {
+    $zip = Join-Path $tmp 'src.zip'
+    Invoke-WebRequest -Uri "https://codeload.github.com/$Repo/zip/refs/heads/$Ref" -OutFile $zip -UseBasicParsing
+    Expand-Archive -Path $zip -DestinationPath $tmp -Force
+    $inner = Get-ChildItem $tmp -Directory | Select-Object -First 1
+    if (-not $inner) { Say "the archive did not contain the expected folder"; exit 1 }
+    $newManifest = Join-Path $inner.FullName 'manifest.json'
+    if (-not (Test-Path $newManifest)) { Say "the download has no manifest.json"; exit 1 }
+    $newVersion = (Get-Content $newManifest -Raw | ConvertFrom-Json).version
+    if (-not $newVersion) { Say "the downloaded manifest has no version"; exit 1 }
+    foreach ($file in Get-ChildItem (Join-Path $inner.FullName 'rules') -Filter *.json) {
+      Get-Content $file.FullName -Raw | ConvertFrom-Json | Out-Null
+    }
+    $oldVersion = $null
+    $oldManifest = Join-Path $Target 'manifest.json'
+    if (Test-Path $oldManifest) { $oldVersion = (Get-Content $oldManifest -Raw | ConvertFrom-Json).version }
+    $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $newer = $true
+    if ($oldVersion) { $newer = ([version]$newVersion -gt [version]$oldVersion) }
+    if (-not $newer) {
+      Set-Content -Path (Join-Path $Target 'update.json') -Value "{""version"": ""$oldVersion"", ""at"": ""$stamp""}" -Encoding ASCII
+      Say "up to date ($oldVersion)"
+      exit 0
+    }
+    $parent = Split-Path -Parent $Target
+    if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }
+    if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
+    Move-Item $inner.FullName $Target
+    Set-Content -Path (Join-Path $Target 'update.json') -Value "{""version"": ""$newVersion"", ""at"": ""$stamp""}" -Encoding ASCII
+    Say "updated $oldVersion -> $newVersion"
+  } finally {
+    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  exit 0
+}
 
 # 1. Where does the extension come from?
 $Src = $null
@@ -143,6 +188,19 @@ Say "  3. Chrome shows a dialog listing what the extension can do, Debugger amon
 Say "     entries. That permission is what lets one layer inspect requests on the sites"
 Say "     that need it. Click Add extension."
 Say "  4. The card appears. Pin the toolbar icon if you want the counter in view."
+Say ""
+if (-not $NoAutoUpdate) {
+  try {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Src 'install\autoupdate-windows.ps1') -Install -Target $Target | Out-Null
+    Say "Auto-update is on. A scheduled task checks github.com/$Repo every 6 hours, and the"
+    Say "extension reloads itself when a newer version has landed on disk."
+  } catch {
+    Say "Auto-update could not be registered. Run install\autoupdate-windows.ps1 -Install to"
+    Say "retry, or -Remove to take it out."
+  }
+} else {
+  Say "Auto-update was skipped (-NoAutoUpdate). install\autoupdate-windows.ps1 -Install adds it."
+}
 Say ""
 Say "Press Enter once the card is showing, and this opens a page to test it on."
 [void](Read-Host)

@@ -177,6 +177,13 @@ const describeSystem = (info) => {
     else bits.push('lists as shipped');
     if (lists.counts && lists.counts.network) bits.push(`${lists.counts.network.toLocaleString()} filters`);
   }
+  const upd = info.update;
+  if (upd) {
+    if (upd.stuck) bits.push(`update ${upd.stuck} would not load`);
+    else if (upd.staged) bits.push(`update ${upd.staged} installed`);
+    else if (upd.newer) bits.push(`${upd.latest} available`);
+    else if (upd.checkedAt) bits.push('up to date');
+  }
   const learned = info.learned;
   if (learned && learned.hosts) {
     const found = learned.promoted || 0;

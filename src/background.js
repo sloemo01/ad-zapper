@@ -39,6 +39,7 @@ try {
 try {
   importScripts('/src/smart.js');
   importScripts('/src/detect.js');
+  importScripts('/src/update.js');
 } catch (_) {}
 
 try {
@@ -66,6 +67,7 @@ const isPopupHost = (host) => {
 };
 const smart = self.AdblockerSmart || null;
 const detect = self.AdblockerDetect || null;
+const update = self.AdblockerUpdate || null;
 const lists = self.AdblockerLists || null;
 const deep = self.AdblockerDeep || null;
 
@@ -485,6 +487,16 @@ const scheduleWork = () => {
   if (lists) lists.schedule();
   try {
     if (chrome.alarms) chrome.alarms.create(IDLE_ALARM, { periodInMinutes: 5 });
+    // Auto-update: the marker in the folder first (a staged update reloads into
+    // it), then GitHub, which cannot install anything but is what the popup
+    // reports. Both are silent on failure.
+    if (update) {
+      update.start();
+      update
+        .applyIfStaged()
+        .then((reloaded) => (reloaded ? null : update.check()))
+        .catch(() => {});
+    }
   } catch (_) {}
 };
 
@@ -511,6 +523,7 @@ const tabInfo = async (tabId) => {
     pinned: host ? pinned.some((entry) => host === entry || host.endsWith('.' + entry)) : false,
     verdict: smart && smart.deepVerdict && host ? await smart.deepVerdict(host) : null,
     learned: detect ? await detect.stats() : null,
+    update: update ? await update.stats() : null,
     site,
     hiding: Object.assign({ enabled: true }, hidingByTab.get(tabId) || { bytes: 0 }),
     hidingTotal: hidingStats(),
@@ -668,6 +681,7 @@ const diagInfo = async () => {
   }
   try {
     if (detect) info.learned = await detect.stats();
+    if (update) info.update = await update.stats();
   } catch (_) {}
   try {
     const stored = await chrome.storage.session.get('yazDiagTail');
@@ -1012,6 +1026,13 @@ if (chrome.tabs && chrome.tabs.onRemoved) {
 
 if (chrome.alarms && chrome.alarms.onAlarm) {
   chrome.alarms.onAlarm.addListener((alarm) => {
+  if (update && alarm.name === update.alarmName) {
+    update
+      .applyIfStaged()
+      .then((reloaded) => (reloaded ? null : update.check()))
+      .catch(() => {});
+    return;
+  }
     if (!alarm) return;
     if (lists && alarm.name === lists.refreshAlarm) {
       enqueue(runRefresh);

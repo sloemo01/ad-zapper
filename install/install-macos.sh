@@ -24,11 +24,16 @@ REV="installer rev 3, 2026-09-22"
 TARGET="${AD_ZAPPER_DIR:-$HOME/Applications/Ad Zapper}"
 
 MODE="install"
+# On by default: an extension that is not in the Web Store does not update unless
+# something on the machine does it, and this is that something.
+AUTOUPDATE=1
 for arg in "$@"; do
   case "$arg" in
     --dry-run) MODE="dry" ;;
     --download) MODE="download" ;;
     --download-only) MODE="download-only" ;;
+    --update-only) MODE="update-only" ;;
+    --no-autoupdate) AUTOUPDATE=0 ;;
     *) echo "unknown option: $arg"; exit 2 ;;
   esac
 done
@@ -36,6 +41,49 @@ done
 say() { printf '%s\n' "$*"; }
 
 say "Ad Zapper installer"
+
+# --update-only is what the background job runs: fetch the newest source, compare
+# it with what is installed, swap only when it is newer, and leave a marker file
+# in the folder saying which version is now there. The extension reads that marker
+# and reloads itself into it. Chrome is never touched by this path.
+if [[ $MODE == "update-only" ]]; then
+  command -v curl >/dev/null 2>&1 || { say "curl is not installed, and this needs it"; exit 1; }
+  TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
+  curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/$REF" -o "$TMP/src.tar.gz" \
+    || { say "the download failed"; exit 1; }
+  tar -xzf "$TMP/src.tar.gz" -C "$TMP"
+  INNER="$(find "$TMP" -maxdepth 1 -type d -name 'ad-zapper-*' | head -1)"
+  [[ -n "$INNER" ]] || { say "the archive did not contain the expected folder"; exit 1; }
+  command -v python3 >/dev/null 2>&1 || { say "python3 is not installed, so versions cannot be compared"; exit 1; }
+  version_of() { python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["version"])' "$1" 2>/dev/null || echo ""; }
+  newer_than() { python3 -c 'import sys;a=[int(x) for x in sys.argv[1].split(".")];b=[int(x) for x in sys.argv[2].split(".")];sys.exit(0 if a>b else 1)' "$1" "$2"; }
+  NEW="$(version_of "$INNER/manifest.json")"
+  OLD=""
+  [[ -f "$TARGET/manifest.json" ]] && OLD="$(version_of "$TARGET/manifest.json")"
+  [[ -n "$NEW" ]] || { say "the download has no readable manifest.json"; exit 1; }
+  python3 - "$INNER" <<'PY' || { say "the downloaded copy is damaged"; exit 1; }
+import glob, json, sys
+root = sys.argv[1]
+json.load(open(root + "/manifest.json"))
+files = glob.glob(root + "/rules/*.json")
+for path in files:
+    json.load(open(path))
+print("checked %d rule sets" % len(files))
+PY
+  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [[ -n "$OLD" ]] && ! newer_than "$NEW" "$OLD"; then
+    printf '{"version": "%s", "at": "%s"}\n' "$OLD" "$stamp" > "$TARGET/update.json"
+    say "up to date ($OLD)"
+    exit 0
+  fi
+  mkdir -p "$(dirname "$TARGET")"
+  rm -rf "$TARGET"
+  mv "$INNER" "$TARGET"
+  printf '{"version": "%s", "at": "%s"}\n' "$NEW" "$stamp" > "$TARGET/update.json"
+  say "updated ${OLD:-nothing} -> $NEW"
+  exit 0
+fi
 say "  ($REV)"
 say ""
 
@@ -147,6 +195,18 @@ say "  3. Chrome shows a dialog listing what the extension can do, Debugger amon
 say "     entries. That permission is what lets one layer inspect requests on the sites"
 say "     that need it. Click Add extension."
 say "  4. The card appears. Pin the toolbar icon if you want the counter in view."
+say ""
+if [[ $AUTOUPDATE -eq 1 ]]; then
+  if bash "$SRC/install/autoupdate-macos.sh" --install "$TARGET" >/dev/null 2>&1; then
+    say "Auto-update is on. A background job checks github.com/$REPO every 6 hours, and when"
+    say "there is something newer the extension reloads itself into it."
+  else
+    say "Auto-update could not be registered. Run install/autoupdate-macos.sh --install to try"
+    say "again, or --remove to leave it out."
+  fi
+else
+  say "Auto-update was skipped (--no-autoupdate). install/autoupdate-macos.sh --install adds it."
+fi
 say ""
 if [[ -t 0 ]]; then
   say "Press Enter once the card is showing, and this opens a page to test it on."
