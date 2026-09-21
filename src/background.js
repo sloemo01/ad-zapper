@@ -488,16 +488,11 @@ const scheduleWork = () => {
   if (lists) lists.schedule();
   try {
     if (chrome.alarms) chrome.alarms.create(IDLE_ALARM, { periodInMinutes: 5 });
-    // Auto-update: the marker in the folder first (a staged update reloads into
-    // it), then GitHub, which cannot install anything but is what the popup
-    // reports. Both are silent on failure.
-    if (update) {
-      update.start();
-      update
-        .applyIfStaged()
-        .then((reloaded) => (reloaded ? null : update.check()))
-        .catch(() => {});
-    }
+    // Updating asks rather than pushes: the popup's button runs the check, and
+    // nothing here goes to the network. What does happen at boot is the local
+    // marker read, so a folder the installer has already swapped reloads into its
+    // new version without a reload click. Silent on failure.
+    if (update) update.applyIfStaged().catch(() => {});
   } catch (_) {}
 };
 
@@ -1040,13 +1035,6 @@ if (chrome.tabs && chrome.tabs.onRemoved) {
 
 if (chrome.alarms && chrome.alarms.onAlarm) {
   chrome.alarms.onAlarm.addListener((alarm) => {
-  if (update && alarm.name === update.alarmName) {
-    update
-      .applyIfStaged()
-      .then((reloaded) => (reloaded ? null : update.check()))
-      .catch(() => {});
-    return;
-  }
     if (!alarm) return;
     if (lists && alarm.name === lists.refreshAlarm) {
       enqueue(runRefresh);

@@ -53,8 +53,13 @@ Chrome only updates extensions that came from the Web Store, and this one cannot
 so updates are asked for rather than pushed. The button at the bottom of the popup does the asking:
 it checks GitHub on the spot (a few hundred bytes), and when there is something newer it changes to
 **Update to <version>**. Clicking it copies the one command that does the work, so the whole update
-is paste, Enter, done, with no reload arrow to click afterwards because the extension reloads itself
-into the new version once the folder on disk holds it.
+is paste, Enter, done.
+
+The button is the only thing that checks. Nothing in this extension runs on a timer, and no request
+leaves it unless you clicked, which also means no update message will ever appear on its own. What
+does happen without being asked is local: when the background worker next starts, it reads the
+version marker in its own folder, and if the installer has put a newer version there it reloads into
+it. That is why there is no reload arrow to click after the paste.
 
 That command runs the installer's `--update-only` path, which asks for the version first and only
 downloads the archive when it is genuinely newer. Running the installer normally does the same thing

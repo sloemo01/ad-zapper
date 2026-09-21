@@ -5,23 +5,20 @@
  * Chrome will never update it, and no API exists to ask. What is possible is the
  * two halves below, which together amount to the same thing:
  *
- *   1. An updater on the machine (installed by install/autoupdate-macos.sh or
- *      install/autoupdate-windows.ps1) runs the installer's --update-only path
- *      every six hours. That path fetches the newest source, compares it with the
- *      folder on disk, and swaps the folder when there is something newer. It
- *      writes update.json into the folder as the last step, so the folder itself
- *      can say which version it now holds.
+ *   1. The update button in the popup hands over the installer's --update-only
+ *      command. That path asks for the version first, fetches the source only when
+ *      it is newer, and swaps the folder. It writes update.json into the folder as
+ *      the last step, so the folder itself can say which version it now holds.
  *
  *   2. The extension reads that marker through chrome.runtime.getURL, and when it
  *      names a version newer than the one running, it calls chrome.runtime.reload.
  *      Reloading re-reads the folder from disk, so the new code is live without
  *      anybody clicking the reload arrow.
  *
- * This file also checks GitHub directly, on its own, every six hours. That check
- * cannot install anything (an extension cannot write files), but it can say that
- * something newer exists, which the popup reports. If the updater on the machine
- * is not installed, the popup is the whole story; with it installed, the download
- * happens on its own and the reload follows.
+ * Nothing here runs on a timer. The check happens when the popup's update button
+ * asks for it and at no other time, so no network request leaves this extension
+ * unless somebody clicked. The marker read is local, and it happens once when the
+ * worker starts, which is what makes an update finish without a reload click.
  *
  * Two guards, because a self-reloading extension that gets it wrong is a loop: a
  * reload is attempted once per marker version, and if the running version is still
@@ -30,10 +27,8 @@
  */
 'use strict';
 
-const UPDATE_ALARM = 'yaz-update';
 const UPDATE_KEY = 'update';
 const UPDATE_MARKER = 'update.json';
-const UPDATE_CHECK_MINUTES = 360;
 const UPDATE_API = 'https://api.github.com/repos/sloemo01/ad-zapper/contents/manifest.json';
 const UPDATE_CDN = 'https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper@main/manifest.json';
 
@@ -192,12 +187,6 @@ const applyIfStaged = async () => {
   return true;
 };
 
-const start = () => {
-  if (!chrome.alarms || !chrome.alarms.create) return false;
-  chrome.alarms.create(UPDATE_ALARM, { delayInMinutes: 1, periodInMinutes: UPDATE_CHECK_MINUTES });
-  return true;
-};
-
 const stats = async () => {
   const state = await readState();
   const os = await platform();
@@ -209,14 +198,11 @@ const stats = async () => {
     newer: !!state.newer,
     staged: state.staged || null,
     stuck: state.stuck || null,
-    checkedAt: state.checkedAt || null,
-    every: UPDATE_CHECK_MINUTES
+    checkedAt: state.checkedAt || null
   };
 };
 
 self.AdblockerUpdate = {
-  alarmName: UPDATE_ALARM,
-  every: UPDATE_CHECK_MINUTES,
   markerFile: UPDATE_MARKER,
   compareVersions,
   runningVersion,
@@ -224,6 +210,5 @@ self.AdblockerUpdate = {
   fetchLatest,
   check,
   applyIfStaged,
-  start,
   stats
 };

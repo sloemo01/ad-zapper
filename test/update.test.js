@@ -181,14 +181,20 @@ const reset = () => {
     platform = 'mac';
   });
 
-  await check('the alarm is scheduled and the stats have the shape the popup reads', async () => {
+  await check('nothing here can fire by itself: no alarm, no timer, no period', async () => {
     reset();
-    assert(update.start() === true, 'the alarm was not scheduled');
+    assert(typeof update.start === 'undefined', 'the module still offers a way to schedule itself');
+    assert(typeof update.alarmName === 'undefined', 'the module still names an alarm');
+    const stats = await update.stats();
+    assert(stats.every === undefined, `the stats still carry a period: ${stats.every}`);
+  });
+
+  await check('the stats have the shape the popup reads', async () => {
+    reset();
     latestResponse = { version: '2.7.25' };
     markerResponse = { version: '2.7.25' };
     await update.check();
     const stats = await update.stats();
-    assert(stats.every === 360, `the interval is ${stats.every}`);
     assert(stats.running === '2.7.24', `running is ${stats.running}`);
     assert(stats.newer === true && stats.staged === '2.7.25', `stats look wrong: ${JSON.stringify(stats)}`);
   });
