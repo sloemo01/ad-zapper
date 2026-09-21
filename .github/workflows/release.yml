@@ -1,0 +1,91 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wrap the PowerShell installer into an exe
+        shell: pwsh
+        run: |
+          $wrapped = $false
+          try {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+            Install-Module ps2exe -Scope CurrentUser -Force -Confirm:$false -ErrorAction Stop
+            Import-Module ps2exe
+            $wrapped = $true
+          } catch {
+            Write-Host "ps2exe from the gallery failed ($($_.Exception.Message)), using the standalone script"
+          }
+          if (-not $wrapped) {
+            Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/MScholtes/PS2EXE/master/ps2exe.ps1' -OutFile ps2exe.ps1 -UseBasicParsing
+            . .\ps2exe.ps1
+          }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Invoke-PS2EXE -inputFile 'install\install-windows.ps1' -outputFile 'dist\AdZapper-Setup.exe' `
+            -title 'Ad Zapper installer' -product 'Ad Zapper' -description 'Loads Ad Zapper into Chrome' -company 'Ad Zapper'
+          Get-Item 'dist\AdZapper-Setup.exe' | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/AdZapper-Setup.exe
+
+  release:
+    needs: [windows-exe]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: The files have to be loadable before they are published
+        run: |
+          node -e 'JSON.parse(require("fs").readFileSync("manifest.json","utf8")); console.log("manifest ok")'
+          node -e 'const fs=require("fs");const f=fs.readdirSync("rules").filter(n=>n.endsWith(".json"));for(const n of f)JSON.parse(fs.readFileSync("rules/"+n,"utf8"));console.log(f.length+" rule sets ok")'
+
+      - name: Zip the extension
+        run: |
+          VERSION=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("manifest.json","utf8")).version)')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          git archive --format=zip --prefix="ad-zapper-$VERSION/" HEAD -o "ad-zapper-$VERSION.zip"
+          ls -lh "ad-zapper-$VERSION.zip"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-exe
+          path: dist
+
+      - name: Stage the installers
+        run: |
+          cp install/install-macos.sh "dist/ad-zapper-$VERSION-install-macos.sh"
+          cp install/install-windows.ps1 "dist/ad-zapper-$VERSION-install-windows.ps1"
+          cp install/install-windows.cmd "dist/ad-zapper-$VERSION-install-windows.cmd"
+          ls -lh dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! printf '%s' "$TAG" | grep -qE '^v[0-9]'; then TAG="v$VERSION"; fi
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Ad Zapper $TAG" --notes "The extension, the installers, and a wrapped Windows program.
+
+          ad-zapper-$VERSION.zip is the extension folder: unzip it, then chrome://extensions, Developer mode, Load unpacked.
+
+          ad-zapper-$VERSION-install-macos.sh and ad-zapper-$VERSION-install-windows.ps1 do the rest of the work: they check the files, put the folder path on your clipboard, open chrome://extensions, and walk you through the four steps to the debugger permission.
+
+          AdZapper-Setup.exe is the same Windows installer wrapped into a double-clickable program. It is unsigned, so Windows will warn about it; the .ps1 and .cmd files are there if you would rather read the code first. Chrome requires a person to click Load unpacked, and no installer can change that."
+          gh release upload "$TAG" "ad-zapper-$VERSION.zip" dist/* --clobber
+          sleep 2
+          gh release view "$TAG" --json tagName,assets --jq '"release " + .tagName, (.assets[] | .name + "  " + (.size|tostring) + " bytes")'
