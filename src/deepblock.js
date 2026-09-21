@@ -234,6 +234,30 @@ if (typeof self.__yazWallHosts === 'string') {
 // The meter lives in src/smart.js, which the worker loads first. Resolved at
 // call time, and named distinctly: importScripts shares one global scope, so a
 // duplicate const across worker scripts is a load-time SyntaxError.
+const smartApi = () => self.AdblockerSmart || null;
+
+// Benefit is what the ledger counts in the other direction: a request answered
+// instead of failed, a wall refused, a copy served. Counted in memory and
+// flushed on detach and on the idle sweep, because a storage write per answered
+// request would cost more than the answer it records.
+const benefitPending = new Map();
+const noteBenefit = (host, amount = 1) => {
+  const clean = String(host || '').trim().toLowerCase().replace(/^www\./, '');
+  if (!clean) return;
+  benefitPending.set(clean, (benefitPending.get(clean) || 0) + amount);
+};
+const flushBenefit = async () => {
+  const api = smartApi();
+  if (!api || !api.deepEvent || !benefitPending.size) return;
+  const entries = Array.from(benefitPending.entries());
+  benefitPending.clear();
+  for (const [host, amount] of entries) {
+    try {
+      await api.deepEvent(host, { deepBenefit: amount });
+    } catch (_) {}
+  }
+};
+
 const newMeter = () => {
   const factory = self.AdblockerSmart && self.AdblockerSmart.makeMeter;
   return factory
@@ -405,6 +429,29 @@ const attach = async (tabId, url, reason) => {
   if (!isAttachable(url)) return false;
 
   const host = hostOf(url);
+
+  // What the ledger says about this host, before the mechanical checks: a host
+  // whose ads the page world and the rule sets already handle is not worth a CDP
+  // session, and a host that has cost sessions without ever producing a benefit
+  // loses its place. Walled hosts are exempt, because the wall defence is the
+  // one job that needs this layer.
+  const api = smartApi();
+  if (api && api.deepVerdict) {
+    // A walled host is normally exempt, because refusing a wall document is the
+    // one job that needs this layer. Page-world hosts are the exception to the
+    // exception: their ads are handled before any request is made, and YouTube
+    // was on the walled list only because it carries response rules, which was
+    // quietly forcing a CDP session there on every visit.
+    const pageWorld = api.isPageWorldHost ? api.isPageWorldHost(host) : false;
+    if (pageWorld || !suffixHit(host, walledHosts)) {
+      const verdict = await api.deepVerdict(host);
+      if (!verdict.attach) {
+        diagAdd({ k: 'attach-skipped', host, why: verdict.why });
+        return false;
+      }
+    }
+  }
+
   if ((heavy.get(host) || 0) > Date.now()) {
     log('skipping', host, ': its last session was too expensive to filter');
     return false;
@@ -465,6 +512,10 @@ const attach = async (tabId, url, reason) => {
     return false;
   }
 
+  if (api && api.deepEvent) {
+    api.deepEvent(host, { deepSessions: 1 }).catch(() => {});
+  }
+
   try {
     await chrome.debugger.sendCommand({ tabId }, 'Fetch.enable', {
       patterns: [
@@ -504,6 +555,7 @@ const attach = async (tabId, url, reason) => {
 };
 
 const detach = async (tabId, reason) => {
+  flushBenefit().catch(() => {});
   const session = sessions.get(tabId);
   if (!session) return false;
   sessions.delete(tabId);
@@ -851,6 +903,7 @@ const handleWalledDocument = async (tabId, params, requestId, url, host) => {
         body
       );
       if (served) {
+        noteBenefit(host, 1);
         wallServedTotal += 1;
         announce();
         log('wall answered with the reader\'s copy', url.slice(0, 80));
@@ -1009,6 +1062,7 @@ const handleEvent = async (source, method, params) => {
           ''
         );
         if (done) {
+          noteBenefit(hostOf(url), 1);
           wallRefusedTotal += 1;
           announce();
           log('wall navigation refused', url.slice(0, 90), '->', root);
@@ -1058,6 +1112,7 @@ const handleEvent = async (source, method, params) => {
     // treatment; everything else gets an empty answer shaped like its own kind.
     if (type !== 'websocket') {
       diagBump(hostOf(params.request.url), `stub-answer ${type}`);
+      noteBenefit(hostOf(params.request.url), 1);
       const stub = stubFor(type);
       const body = stub.base64 ? stub.body : btoa(stub.body);
       const headers = [{ name: 'Content-Type', value: stub.mime }, { name: 'Cache-Control', value: 'no-store' }];
@@ -1214,6 +1269,8 @@ self.AdblockerDeep = {
   state: stateOf,
   isAttached: (tabId) => sessions.has(tabId),
   isWalledHost: (host) => suffixHit(host, walledHosts),
+  isPageWorldHost: (host) =>
+    !!(smartApi() && smartApi().isPageWorldHost && smartApi().isPageWorldHost(host)),
   // Turning the switch back on has to be able to attach immediately. The
   // cooldown a refused or failed attach leaves behind belongs to the state that
   // failed, not to the state that was just switched on.

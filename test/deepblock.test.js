@@ -136,6 +136,10 @@ sandbox.AdblockerEngine = {
 vm.createContext(sandbox);
 // The worker importScripts these in this order: the adaptive layer registers
 // itself, then the deep-block layer reads it (the cost meter comes from there).
+// The harness loads the real smart.js, so the real ledger decides whether a host
+// is worth attaching to. These checks are about the mechanics underneath that
+// decision (slots, retries, detach), so the verdict is stubbed to yes here, and
+// overridden in the one check that tests the gate itself.
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'smart.js'), 'utf8'), sandbox, {
   filename: 'smart.js'
 });
@@ -153,6 +157,8 @@ sandbox.self.__yazWallHosts = String(sandbox.self.__yazWallHosts || '') + '\nwal
 vm.runInContext(source, sandbox, { filename: 'deepblock.js' });
 
 const deep = sandbox.AdblockerDeep;
+const realVerdict = sandbox.AdblockerSmart.deepVerdict;
+sandbox.AdblockerSmart.deepVerdict = async () => ({ attach: true, why: 'test' });
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 const opsOf = (op) => calls.filter((call) => call.op === op);
 const attachAttempts = (tabId) => opsOf('attach').filter((call) => call.target.tabId === tabId).length;
@@ -927,8 +933,20 @@ const check = async (name, fn) => {
     assert(!attached, 'an ordinary host was attached by the retry');
   });
 
+  await check('the ledger can refuse an attach the mechanics would allow', async () => {
+    const before = calls.length;
+    sandbox.AdblockerSmart.deepVerdict = realVerdict;
+    const verdict = await sandbox.AdblockerSmart.deepVerdict('www.youtube.com');
+    const attached = await deep.attach(7777, 'https://www.youtube.com/watch?v=1', 'test');
+    sandbox.AdblockerSmart.deepVerdict = async () => ({ attach: true, why: 'test' });
+    assert(verdict.attach === false && verdict.why === 'page-world', `real ledger said ${verdict.why}`);
+    assert(attached === false, 'the real ledger let a page-world host attach');
+    assert(!calls.slice(before).some((call) => call.op === 'attach'), 'the debugger was touched anyway');
+  });
+
   console.log(results.join('\n'));
-  const failed = results.filter((line) => line.startsWith('FAIL'));
+
+const failed = results.filter((line) => line.startsWith('FAIL'));
   if (failed.length) {
     console.log(`\n${failed.length} check(s) failed`);
     process.exit(1);

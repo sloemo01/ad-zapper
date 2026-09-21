@@ -177,11 +177,80 @@ const siteStats = async () => {
   return { hosts: Object.keys(records).length, limit: SITE_LIMIT };
 };
 
+// --- what the deep block has earned -----------------------------------------
+//
+// Attaching used to be a one-way ladder: a host climbed it once and stayed
+// attached forever. That is fine until a host is attached for weeks while the
+// CDP layer does nothing there, which costs a round trip per request for no
+// gain. So the record counts both directions: sessions, and benefit (requests
+// answered instead of failed, walls refused, copies served).
+
+const NO_BENEFIT_SESSIONS = 3;
+const HANDLED_WITHOUT_DEEP = 5;
+
+// Hosts whose ads are already handled without the deep block: the page-world
+// interceptor strips YouTube's ad data before the player reads it, and the rule
+// sets cover the tracker requests. Attaching CDP there buys nothing and costs a
+// round trip per request, so it is not offered to them at all, pinned or not.
+const PAGE_WORLD_HOSTS = [
+  'youtube.com',
+  'youtu.be',
+  'youtube-nocookie.com',
+  'googlevideo.com',
+  'ytimg.com',
+  'ggpht.com'
+];
+
+const isPageWorldHost = (host) => {
+  const clean = normalizeHost(host);
+  if (!clean) return false;
+  return PAGE_WORLD_HOSTS.some((base) => clean === base || clean.endsWith('.' + base));
+};
+
+const deepVerdict = async (host) => {
+  const clean = normalizeHost(host);
+  if (!clean) return { attach: false, why: 'no host' };
+  if (isPageWorldHost(clean)) return { attach: false, why: 'page-world' };
+  const records = await readSites();
+  const entry = records[clean];
+  if (!entry) return { attach: true, why: 'unknown host' };
+  const sessions = entry.deepSessions || 0;
+  const benefit = entry.deepBenefit || 0;
+  if ((entry.ads || 0) >= HANDLED_WITHOUT_DEEP && sessions === 0) {
+    return { attach: false, why: 'handled without it' };
+  }
+  if (sessions >= NO_BENEFIT_SESSIONS && benefit === 0) {
+    return { attach: false, why: `no benefit in ${sessions} sessions` };
+  }
+  return { attach: true, why: benefit > 0 || sessions > 0 ? 'has benefit' : 'unknown host' };
+};
+
+const deepEvent = async (host, patch = {}) => {
+  const clean = normalizeHost(host);
+  if (!clean || !clean.includes('.')) return null;
+  const records = await readSites();
+  const entry = entryOf(records, clean);
+  for (const key of ['deepSessions', 'deepBenefit']) {
+    const amount = Number(patch[key]) || 0;
+    if (amount) entry[key] = (entry[key] || 0) + amount;
+  }
+  const now = Date.now();
+  if (!entry.firstSeen) entry.firstSeen = now;
+  entry.lastSeen = entry.lastSeen || now;
+  records[clean] = entry;
+  await writeSites(trimSites(records));
+  return entry;
+};
+
 self.AdblockerSmart = {
   siteKey: SITE_KEY,
   siteLimit: SITE_LIMIT,
   hotAds: HOT_ADS,
   hotPopups: HOT_POPUPS,
+  pageWorldHosts: PAGE_WORLD_HOSTS,
+  isPageWorldHost,
+  deepVerdict,
+  deepEvent,
   makeLru,
   makeMeter,
   describeBytes,

@@ -507,6 +507,7 @@ const tabInfo = async (tabId) => {
     engineReady: !!state.engineReady,
     memory: state.memory || (deep && deep.memory ? deep.memory() : null),
     pinned: host ? pinned.some((entry) => host === entry || host.endsWith('.' + entry)) : false,
+    verdict: smart && smart.deepVerdict && host ? await smart.deepVerdict(host) : null,
     site,
     hiding: Object.assign({ enabled: true }, hidingByTab.get(tabId) || { bytes: 0 }),
     hidingTotal: hidingStats(),
@@ -715,6 +716,15 @@ const syncWallAllowRules = async () => {
     //    its ad stack, the recovery SDK its wall vendor serves).
     // Documents stay out of both, so navigations still meet the wall refusal
     // and the copy serve.
+    // A page-world host keeps the rule sets' blocking: its ads are removed
+    // before any request is made, so it is not carved out and not attached.
+    // YouTube reached this list only because it carries response rules, which
+    // was quietly standing the 214k rules down on the busiest site there is.
+    if (deep && deep.isPageWorldHost && Array.isArray(hosts)) {
+      for (let index = hosts.length - 1; index >= 0; index--) {
+        if (deep.isPageWorldHost(hosts[index])) hosts.splice(index, 1);
+      }
+    }
     const allowRules = [];
     hosts.forEach((host, index) => {
       allowRules.push({

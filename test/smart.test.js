@@ -178,6 +178,47 @@ const assert = (condition, message) => {
     assert(heap === null || heap > 0, 'heapBytes should be null or a real number');
   });
 
+  // --- the deep ledger ------------------------------------------------------
+
+  await check('a page-world host is never offered a CDP session', async () => {
+    for (const host of ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'i.ytimg.com']) {
+      const verdict = await smart.deepVerdict(host);
+      assert(verdict.attach === false, `${host} would attach`);
+      assert(verdict.why === 'page-world', `${host} gave "${verdict.why}"`);
+    }
+    const other = await smart.deepVerdict('example.com');
+    assert(other.attach === true, 'example.com should still be attachable');
+  });
+
+  await check('a host whose ads are handled without it loses its place', async () => {
+    await smart.rememberSite('busy.example', { ads: 6, visits: 6 });
+    const verdict = await smart.deepVerdict('busy.example');
+    assert(verdict.attach === false, 'busy.example would attach');
+    assert(verdict.why === 'handled without it', `got "${verdict.why}"`);
+  });
+
+  await check('sessions without benefit stop the attaching', async () => {
+    await smart.deepEvent('costly.example', { deepSessions: 3 });
+    const verdict = await smart.deepVerdict('costly.example');
+    assert(verdict.attach === false, 'costly.example would attach');
+    assert(/no benefit/.test(verdict.why), `got "${verdict.why}"`);
+  });
+
+  await check('one answered request buys the session back', async () => {
+    await smart.deepEvent('costly.example', { deepBenefit: 1 });
+    const verdict = await smart.deepVerdict('costly.example');
+    assert(verdict.attach === true, 'a host with benefit must keep attaching');
+    assert(verdict.why === 'has benefit', `got "${verdict.why}"`);
+  });
+
+  await check('the ledger counts both directions', async () => {
+    await smart.deepEvent('counted.example', { deepSessions: 2, deepBenefit: 5 });
+    await smart.deepEvent('counted.example', { deepSessions: 1 });
+    const after = (await smart.readSites())['counted.example'];
+    assert(after.deepSessions === 3, `sessions did not accumulate: ${after.deepSessions}`);
+    assert(after.deepBenefit === 5, `benefit was clobbered: ${after.deepBenefit}`);
+  });
+
   const failed = results.filter((line) => line.startsWith('FAIL'));
   console.log(results.join('\n'));
   console.log(`\n${results.length - failed.length}/${results.length} passed`);

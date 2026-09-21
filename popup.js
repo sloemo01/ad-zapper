@@ -137,6 +137,9 @@ const describeDeep = (info) => {
     const count = info.blockedHere ? `, ${info.blockedHere.toLocaleString()} blocked here` : '';
     return `Deep block is <b>on</b> for this tab${count}`;
   }
+  if (info.verdict && info.verdict.attach === false) {
+    return `Deep block is skipped here, ${info.verdict.why}`;
+  }
   if (info.pinned) return 'Deep block is <b>armed</b> for this site';
   if (!info.engineReady) return 'Deep block is warming up';
   if (info.site && info.site.hot) return 'Deep block will <b>kick in</b> here: this site has form';
@@ -214,7 +217,8 @@ const renderDeep = async () => {
   const label = document.getElementById('deepLabel');
   const pin = document.getElementById('pin');
   const info = tabInfo;
-  if (dot) dot.className = info && (info.attached || info.pinned) ? 'dot on' : 'dot';
+  const skipped = !!(info && info.verdict && info.verdict.attach === false);
+  if (dot) dot.className = info && (info.attached || (info.pinned && !skipped)) ? 'dot on' : 'dot';
   if (label) label.innerHTML = describeDeep(info);
   if (pin) {
     pin.textContent = info && info.pinned ? 'Stop deep blocking this site' : 'Deep block this site';

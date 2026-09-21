@@ -502,6 +502,19 @@ const assert = (condition, message) => {
     assert(answer.deep && Array.isArray(answer.deep.events), 'the probe carried no decision ring');
   });
 
+  await check('the carve-out leaves the page-world hosts to the rule sets', async () => {
+    const allows = addedRules.filter((rule) => rule.action && rule.action.type === 'allow');
+    const carved = allows.reduce(
+      (all, rule) => all.concat((rule.condition && rule.condition.initiatorDomains) || []),
+      []
+    );
+    assert(
+      !carved.includes('youtube.com') && !carved.includes('www.youtube.com'),
+      'youtube is carved out, so the rule sets stand down on the busiest site there is'
+    );
+    assert(carved.includes('bild.de'), 'bild.de should still be carved out');
+  });
+
   await check('the filter lists stand down on the walled hosts', async () => {
     const allows = addedRules.filter((rule) => rule.action && rule.action.type === 'allow');
     assert(allows.length >= 11, `only ${allows.length} allow rule(s) were installed`);
