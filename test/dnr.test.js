@@ -290,11 +290,22 @@ check('the conversion is honest about what it cannot express', () => {
   // 131k lines of the pre-AdGuard list set and failed the moment a source was
   // added. What it is really guarding is a runaway in the converter, so it
   // compares against the lines the sources actually hold.
+  //
+  // The list files are build inputs, fetched by tools/fetch-lists.mjs, and they
+  // are not committed, so a fresh clone has curated-rules.txt and nothing else.
+  // The ratio only means something once they have been fetched.
   const listDir = path.join(__dirname, '..', 'tools', 'lists');
-  const lineTotal = fs
-    .readdirSync(listDir)
-    .filter((name) => name.endsWith('.txt'))
-    .reduce((sum, name) => sum + fs.readFileSync(path.join(listDir, name), 'utf8').split('\n').length, 0);
+  const listFiles = fs.existsSync(listDir)
+    ? fs.readdirSync(listDir).filter((name) => name.endsWith('.txt'))
+    : [];
+  if (listFiles.length < 2) {
+    console.log('  list files not fetched, ratio check skipped');
+    return;
+  }
+  const lineTotal = listFiles.reduce(
+    (sum, name) => sum + fs.readFileSync(path.join(listDir, name), 'utf8').split('\n').length,
+    0
+  );
   assert(allRules.length < lineTotal, `more rules (${allRules.length}) than filter lines (${lineTotal})`);
   assert(allRules.length > lineTotal / 4, `only ${allRules.length} rules came out of ${lineTotal} lines`);
 });
