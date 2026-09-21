@@ -6,6 +6,60 @@ A Chrome extension (Manifest V3) that blocks ads and trackers on every page from
 lists, removes YouTube ads, kills popunder windows and ad loaders, hides ad slots, and rewrites
 ad-block walls before they render. Loads as-is, no build step for the extension itself.
 
+## Install
+
+### macOS
+
+```
+curl -fsSL https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-macos.sh -o /tmp/ad-zapper.sh
+bash /tmp/ad-zapper.sh
+```
+
+Piping straight into bash works too, but stdin is the script then, so the pause before the test
+page does not work: `curl -fsSL .../install-macos.sh | bash`.
+
+### Windows
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-windows.ps1 -OutFile $env:TEMP\ad-zapper.ps1; & $env:TEMP\ad-zapper.ps1"
+```
+
+There is also `install\install-windows.cmd` for double-clicking after a clone.
+
+### What the script does with the folder
+
+It works the same whether you cloned the repository or not. Inside a checkout it installs that
+folder. Anywhere else it downloads the newest `main` from GitHub, unpacks it into a folder that
+stays put (`~/Applications/Ad Zapper` on macOS, `%LOCALAPPDATA%\Ad Zapper` on Windows) and
+installs from there. Running it again replaces that folder with the newest version, which is how
+you update. Both scripts take `--dry-run` / `-DryRun` to report without downloading or touching
+Chrome, `--download` / `-Download` to force a fresh copy, and `--download-only` / `-DownloadOnly`
+to fetch and check the files and stop before Chrome.
+
+### What the scripts can and cannot do
+
+Neither script finishes the job, because Chrome does not allow it: an unpacked extension is loaded
+by a person, and no supported API or installer can put one into a profile you are already signed
+into. What the scripts do is everything around that. They check that Chrome is where it should be,
+check that the checkout is complete and that the manifest and all ten rule sets parse, put the
+folder path on your clipboard, and open `chrome://extensions`. Then it is four steps:
+
+1. Developer mode, the toggle at the top right.
+2. Load unpacked, top left. In the file dialog press Cmd+Shift+G (macOS) or Ctrl+V (Windows),
+   paste, and press Open.
+3. Chrome shows a dialog listing what the extension can do, Debugger among the entries. That
+   permission is what lets one layer inspect requests on the sites that need it. Click Add
+   extension.
+4. The card appears. Pin the toolbar icon if you want the counter in view.
+
+The installer then waits, and once the card is showing you press Enter and it opens YouTube for
+you. What to look for there: the toolbar icon counts up as ads are stopped, DevTools
+(Cmd+Option+J, or Ctrl+Shift+J) shows `[yt-ad-zapper]` lines, and a bar under the address bar
+reads "Ad Zapper started debugging this browser" on the sites where the deep block attaches. That
+bar is the debugger permission in action, and it clears itself.
+
+After editing any file, hit the reload button on the extension card.
+
 ## What it does
 
 Seven layers, each covering what the one below cannot.
@@ -244,60 +298,6 @@ The toolbar badge shows the all-time YouTube ad total; click the icon for the fu
 - **Reset count** zeroes the tallies, forgets every learned host and clears the site registry.
 
 Numbers live in `chrome.storage.local`, so they are per browser profile and survive restarts.
-
-## Install
-
-### macOS
-
-```
-curl -fsSL https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-macos.sh -o /tmp/ad-zapper.sh
-bash /tmp/ad-zapper.sh
-```
-
-Piping straight into bash works too, but stdin is the script then, so the pause before the test
-page does not work: `curl -fsSL .../install-macos.sh | bash`.
-
-### Windows
-
-```
-powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-windows.ps1 -OutFile $env:TEMP\ad-zapper.ps1; & $env:TEMP\ad-zapper.ps1"
-```
-
-There is also `install\install-windows.cmd` for double-clicking after a clone.
-
-### What the script does with the folder
-
-It works the same whether you cloned the repository or not. Inside a checkout it installs that
-folder. Anywhere else it downloads the newest `main` from GitHub, unpacks it into a folder that
-stays put (`~/Applications/Ad Zapper` on macOS, `%LOCALAPPDATA%\Ad Zapper` on Windows) and
-installs from there. Running it again replaces that folder with the newest version, which is how
-you update. Both scripts take `--dry-run` / `-DryRun` to report without downloading or touching
-Chrome, `--download` / `-Download` to force a fresh copy, and `--download-only` / `-DownloadOnly`
-to fetch and check the files and stop before Chrome.
-
-### What the scripts can and cannot do
-
-Neither script finishes the job, because Chrome does not allow it: an unpacked extension is loaded
-by a person, and no supported API or installer can put one into a profile you are already signed
-into. What the scripts do is everything around that. They check that Chrome is where it should be,
-check that the checkout is complete and that the manifest and all ten rule sets parse, put the
-folder path on your clipboard, and open `chrome://extensions`. Then it is four steps:
-
-1. Developer mode, the toggle at the top right.
-2. Load unpacked, top left. In the file dialog press Cmd+Shift+G (macOS) or Ctrl+V (Windows),
-   paste, and press Open.
-3. Chrome shows a dialog listing what the extension can do, Debugger among the entries. That
-   permission is what lets one layer inspect requests on the sites that need it. Click Add
-   extension.
-4. The card appears. Pin the toolbar icon if you want the counter in view.
-
-The installer then waits, and once the card is showing you press Enter and it opens YouTube for
-you. What to look for there: the toolbar icon counts up as ads are stopped, DevTools
-(Cmd+Option+J, or Ctrl+Shift+J) shows `[yt-ad-zapper]` lines, and a bar under the address bar
-reads "Ad Zapper started debugging this browser" on the sites where the deep block attaches. That
-bar is the debugger permission in action, and it clears itself.
-
-After editing any file, hit the reload button on the extension card.
 
 ## Checking it works
 
