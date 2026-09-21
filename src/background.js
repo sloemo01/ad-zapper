@@ -928,6 +928,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === TAB_INFO_MESSAGE) {
     const wanted = message.tabId === undefined ? tabId : message.tabId;
+    // The popup opening is the moment right after somebody pasted the update
+    // command, so it is also the moment to look for the marker the installer
+    // wrote. If the folder holds something newer, this reloads into it now
+    // rather than whenever Chrome next restarts the worker.
+    if (update) update.applyIfStaged().catch(() => {});
     tabInfo(wanted).then((info) => sendResponse(info));
     return true; // async response
   }
@@ -1011,6 +1016,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     update
       .check()
+      .then(() => update.applyIfStaged())
       .then(() => update.stats())
       .then((stats) => sendResponse({ ok: true, update: stats }))
       .catch(() => sendResponse({ ok: false }));

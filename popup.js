@@ -306,7 +306,7 @@ if (updateSelfButton) {
       // one command that does, and the extension reloads into the result.
       try {
         await navigator.clipboard.writeText(upd.command);
-        if (label) label.textContent = 'Command copied. Paste it in Terminal; this page reloads itself when the new files land.';
+        if (label) label.textContent = `Command copied. Paste it in Terminal, then open this panel again: it finishes the update and reloads itself.`;
       } catch (_) {
         if (label) label.textContent = `Copy this and run it: ${upd.command}`;
       }
