@@ -247,14 +247,41 @@ Numbers live in `chrome.storage.local`, so they are per browser profile and surv
 
 ## Install
 
-1. Open `chrome://extensions`
-2. Turn on Developer mode
-3. Load unpacked, and pick this folder
-4. Open a video that has ads, and watch the badge count up
+### macOS
 
-After editing any file, hit the reload button on the extension card. Chrome will ask you to accept
-the "read and change all your data" plus debugger permissions; both are needed for the layers
-above.
+```
+git clone https://github.com/sloemo01/ad-zapper.git
+cd ad-zapper
+./install/install-macos.sh
+```
+
+### Windows
+
+In PowerShell, from the cloned folder:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File install\install-windows.ps1
+```
+
+or double-click `install\install-windows.cmd`. Add `--dry-run` (macOS) or `-DryRun` (Windows) to
+see what it would do without touching the clipboard or opening a browser.
+
+### What the scripts can and cannot do
+
+Neither script finishes the job, because Chrome does not allow it: an unpacked extension is loaded
+by a person, and no supported API or installer can put one into a profile you are already signed
+into. What the scripts do is everything around that. They check that Chrome is where it should be,
+check that the checkout is complete and that the manifest and all ten rule sets parse, put the
+folder path on your clipboard, and open `chrome://extensions`. Then it is three clicks:
+
+1. Turn on Developer mode, top right.
+2. Load unpacked, paste the path, and press Open.
+3. Open a site that has ads and check the counter on the toolbar icon.
+
+Chrome asks you to accept "read and change all your data" and the debugger permission. The first
+is the rule sets; the second is the layer that inspects requests on the sites that need it, and
+declining it costs only that layer. After editing any file, hit the reload button on the extension
+card.
 
 ## Checking it works
 
@@ -386,6 +413,7 @@ checks exercise them, and they are documented as such rather than hidden in a li
 | `popup.html` / `popup.js` | popup: master switch, tallies, deep-block control, list update, reset |
 | `engine/` | vendored filter engine (`@ghostery/adblocker`), its brain, and the replace rules |
 | `tools/` | list fetching, engine build, DNR conversion, replace rules, popup list, icons |
+| `install/` | one-command setup for macOS and Windows |
 | `probe/` | separate unpacked extension that measures CDP viability |
 | `test/` | node test suites for every layer |
 

@@ -46,6 +46,14 @@ jobs:
           cat "$RUNNER_TEMP/suites.txt"
           exit $fail
 
+      # The installers are the first thing a stranger runs, so a broken one has
+      # to fail here rather than on their machine.
+      - name: Installer scripts
+        run: |
+          bash -n install/install-macos.sh
+          bash install/install-macos.sh --dry-run
+          pwsh -NoProfile -File install/parse-check.ps1
+
       - name: Smoke
         if: always()
         run: |
