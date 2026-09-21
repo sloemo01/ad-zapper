@@ -177,6 +177,14 @@ const describeSystem = (info) => {
     else bits.push('lists as shipped');
     if (lists.counts && lists.counts.network) bits.push(`${lists.counts.network.toLocaleString()} filters`);
   }
+  const learned = info.learned;
+  if (learned && learned.hosts) {
+    const found = learned.promoted || 0;
+    const hidden = learned.published || 0;
+    if (found || hidden) {
+      bits.push(`${found} ad host${found === 1 ? '' : 's'} found, ${hidden} selector${hidden === 1 ? '' : 's'} hidden`);
+    }
+  }
   if (info.hidingTotal) bits.push(`hiding ${info.hidingTotal.hosts} host${info.hidingTotal.hosts === 1 ? '' : 's'}`);
   return bits.join(' · ');
 };

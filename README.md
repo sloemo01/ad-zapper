@@ -288,6 +288,22 @@ three ads makes a site **hot**, and hot sites attach on sight without waiting fo
 clean visits in a row marks a site quiet, and quiet sites skip the attach check entirely. Reset
 clears the registry; it does not throw away the downloaded lists.
 
+### Detecting ads instead of remembering them
+
+The registry above only knows the sites you have visited. `src/detect.js` looks at the page in front
+of it, on the first visit, through `chrome.scripting`: the third-party hosts the page actually
+loaded, and the elements shaped like ad slots (named like one, or sized like one *and* named or
+served from ad plumbing; a standard 300x250 the size of an ad on its own is not enough).
+
+A host that is named like ad plumbing, or that turns up on three different sites, goes through the
+same escalation gate the popup catcher uses, so it is blocked everywhere rather than on the site
+that revealed it. An element selector is generalised first, with the numbers and hashes stripped
+out (`div-gpt-ad-1234-0` becomes `div[id^="div-gpt-ad"]`), and it only joins the hiding sheet once
+two different sites have produced it. One site's guess never hides anything on another site.
+
+Both memories are capped (800 hosts, 200 selectors) and both are visible: the popup reports what it
+found, the probe carries the list, and Reset empties them.
+
 A tab whose engine work turns pathological (p95 above 4 ms over 40 samples) loses its session and
 its host gets a 30 minute cooldown, so filtering cannot quietly slow the browser down. Detaching
 mid-request is safe: that request still gets its reply.

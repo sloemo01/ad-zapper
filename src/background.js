@@ -38,6 +38,7 @@ try {
 
 try {
   importScripts('/src/smart.js');
+  importScripts('/src/detect.js');
 } catch (_) {}
 
 try {
@@ -64,6 +65,7 @@ const isPopupHost = (host) => {
   }
 };
 const smart = self.AdblockerSmart || null;
+const detect = self.AdblockerDetect || null;
 const lists = self.AdblockerLists || null;
 const deep = self.AdblockerDeep || null;
 
@@ -508,6 +510,7 @@ const tabInfo = async (tabId) => {
     memory: state.memory || (deep && deep.memory ? deep.memory() : null),
     pinned: host ? pinned.some((entry) => host === entry || host.endsWith('.' + entry)) : false,
     verdict: smart && smart.deepVerdict && host ? await smart.deepVerdict(host) : null,
+    learned: detect ? await detect.stats() : null,
     site,
     hiding: Object.assign({ enabled: true }, hidingByTab.get(tabId) || { bytes: 0 }),
     hidingTotal: hidingStats(),
@@ -663,6 +666,9 @@ const diagInfo = async () => {
   } catch (_) {
     info.allowRules = 'unavailable';
   }
+  try {
+    if (detect) info.learned = await detect.stats();
+  } catch (_) {}
   try {
     const stored = await chrome.storage.session.get('yazDiagTail');
     const tail = stored && stored.yazDiagTail;
@@ -895,7 +901,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === PAGE_MESSAGE) {
     handlePage(tabId, message.url, message.top)
-      .then((hide) => sendResponse(hide))
+      .then((hide) => {
+        runDetect(tabId, message.url).catch(() => {});
+        sendResponse(hide);
+      })
       .catch(() => sendResponse({ css: '', host: '', bytes: 0 }));
     return true; // async response: the caller injects the CSS it gets back
   }
@@ -986,7 +995,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === RESET_MESSAGE) {
-    enqueue(resetStats).then(() => sendResponse({ ok: true }));
+    enqueue(async () => {
+      if (detect) await detect.forget();
+      await resetStats();
+    }).then(() => sendResponse({ ok: true }));
     return true; // keeps the message channel open for the async response
   }
 });
@@ -1068,14 +1080,61 @@ const isWalledUrl = (url) => {
   }
 };
 
+// --- generic detection -----------------------------------------------------
+//
+// Everything else here works from lists or from what you have already visited.
+// This job looks at the page in front of it: the third-party hosts it actually
+// loaded, and the elements shaped like ad slots. A host that is named like ad
+// plumbing, or that turns up on three different sites, goes through the same
+// escalation gate the popup catcher uses, which refuses anything that is not ad
+// infrastructure. A selector joins the hiding sheet only once two different
+// sites have produced it, so one site's guess never hides anything anywhere.
+const detectSeen = new Map();
+let detectLearned = 0;
+
+const runDetect = async (tabId, url) => {
+  if (!power || !detect || !chrome.scripting || typeof tabId !== 'number') return;
+  if (!/^https?:/i.test(String(url || ''))) return;
+  if (detectSeen.get(tabId) === url) return;
+  detectSeen.set(tabId, url);
+  if (detectSeen.size > 60) detectSeen.clear();
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: detect.detectCollect,
+      args: [detect.adHostSource, detect.adPathSource, detect.nameShapeSource, detect.sizes]
+    });
+    const payload = results && results[0] && results[0].result;
+    if (!payload) return;
+    const pageHost = hostOfUrl(url);
+    const sighted = await detect.recordSightings(pageHost, payload.hosts);
+    const remembered = await detect.rememberSelectors(pageHost, payload.candidates);
+    if (remembered.ready.length) {
+      await detect.publishCss(remembered.state);
+      detectLearned += remembered.ready.length;
+      await injectHiding(tabId, null, url);
+    }
+    for (const item of sighted.promoted) enqueue(() => escalateHost(item.host));
+    if (sighted.promoted.length || remembered.ready.length) {
+      console.log(
+        '[ad-zapper:detect]',
+        pageHost,
+        `${payload.thirdParty} third-party host(s), ${payload.candidates.length} candidate(s), learned ${sighted.promoted.length} host(s), ${remembered.ready.length} selector(s)`
+      );
+    }
+  } catch (_) {}
+};
+
 const injectHiding = async (tabId, frameIds, url) => {
   if (!power || typeof tabId !== 'number') return false;
   const files = isWalledUrl(url) ? WALLED_HIDING_FILES : HIDING_FILES;
+  const target = frameIds && frameIds.length ? { tabId, frameIds } : { tabId, allFrames: true };
   try {
-    await chrome.scripting.insertCSS({
-      target: frameIds && frameIds.length ? { tabId, frameIds } : { tabId, allFrames: true },
-      files
-    });
+    await chrome.scripting.insertCSS({ target, files });
+    // The selectors this layer has learned from two or more sites. Kept as one
+    // string because insertCSS and removeCSS only match on identical text.
+    const learned = detect ? await detect.learnedCss() : '';
+    if (learned) await chrome.scripting.insertCSS({ target, css: learned, origin: 'USER' });
     return true;
   } catch (_) {
     return false;
@@ -1089,6 +1148,10 @@ const removeHiding = async () => {
       if (!tab || typeof tab.id !== 'number') continue;
       try {
         await chrome.scripting.removeCSS({ target: { tabId: tab.id, allFrames: true }, files: HIDING_FILES });
+        const learned = detect ? await detect.learnedCss() : '';
+        if (learned) {
+          await chrome.scripting.removeCSS({ target: { tabId: tab.id, allFrames: true }, css: learned, origin: 'USER' });
+        }
       } catch (_) {}
     }
   } catch (_) {}
