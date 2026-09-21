@@ -1,0 +1,67 @@
+/* Cosmetic cleanup: hide ad containers YouTube leaves behind. */
+
+/* Player: overlays, badges, progress pills, surveys, merch shelf */
+.html5-video-player .video-ads,
+.html5-video-player .ytp-ad-module,
+.html5-video-player .ytp-ad-overlay-container,
+.html5-video-player .ytp-ad-overlay-slot,
+.html5-video-player .ytp-ad-image-overlay,
+.html5-video-player .ytp-ad-text-overlay,
+.html5-video-player .ytp-ad-player-overlay,
+.html5-video-player .ytp-ad-player-overlay-layout,
+.html5-video-player .ytp-ad-player-overlay-instream-info,
+.html5-video-player .ytp-ad-persistent-progress-bar-container,
+.html5-video-player .ytp-ad-progress,
+.html5-video-player .ytp-ad-progress-list,
+.html5-video-player .ytp-ad-preview-container,
+.html5-video-player .ytp-ad-simple-ad-badge,
+.html5-video-player .ytp-ad-badge,
+.html5-video-player .ytp-ad-button,
+.html5-video-player .ytp-ad-button-icon,
+.html5-video-player .ytp-ad-survey,
+.html5-video-player .ytp-ad-survey-questions,
+.html5-video-player .ytp-featured-product {
+  display: none !important;
+}
+
+/* Page surfaces: masthead, watch page, feed, search, sidebar, shorts */
+#masthead-ad,
+#player-ads,
+ytd-player-legacy-desktop-watch-ads-renderer,
+ytd-action-companion-ad-renderer,
+ytd-companion-slot-renderer,
+ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"],
+ytd-display-ad-renderer,
+ytd-promoted-sparkles-web-renderer,
+ytd-promoted-sparkles-text-search-renderer,
+ytd-promoted-video-renderer,
+ytd-compact-promoted-video-renderer,
+ytd-compact-promoted-sparkles-web-renderer,
+ytd-in-feed-ad-layout-renderer,
+ytd-ad-slot-renderer,
+ytd-banner-promo-renderer,
+ytd-statement-banner-renderer,
+ytd-video-masthead-ad-v3-renderer,
+ytd-search-pyv-renderer,
+ytd-merch-shelf-renderer,
+ytm-companion-slot,
+ytm-promoted-sparkles-web-renderer {
+  display: none !important;
+}
+
+/* Wrappers that would otherwise leave an empty slot in the grid */
+ytd-rich-item-renderer:has(ytd-ad-slot-renderer),
+ytd-rich-item-renderer:has(ytd-display-ad-renderer),
+ytd-rich-item-renderer:has(ytd-promoted-video-renderer),
+ytd-rich-section-renderer:has(ytd-ad-slot-renderer),
+ytd-rich-section-renderer:has(ytd-statement-banner-renderer),
+ytd-rich-section-renderer:has(ytd-in-feed-ad-layout-renderer) {
+  display: none !important;
+}
+
+/* The anti-adblock wall (the watchdog script also removes it) */
+ytd-enforcement-message-view-model,
+tp-yt-paper-dialog:has(ytd-enforcement-message-view-model) {
+  display: none !important;
+}
+

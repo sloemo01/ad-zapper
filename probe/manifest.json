@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Ad Zapper CDP Probe",
+  "version": "0.1.0",
+  "description": "Measures chrome.debugger network interception cost and proves block + HTML rewrite work end to end. Dev tool, not a blocker.",
+  "permissions": ["debugger", "tabs", "storage"],
+  "background": {
+    "service_worker": "probe-worker.js"
+  },
+  "action": {
+    "default_title": "Ad Zapper CDP Probe"
+  }
+}

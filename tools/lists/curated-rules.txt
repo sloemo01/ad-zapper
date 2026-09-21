@@ -1,0 +1,23 @@
+! Hand-written rules, and the only ones in this build that are not from a
+! published list. Each is global on purpose: nothing here is scoped to a
+! particular site, and in particular nothing is scoped to the Toolz test page,
+! which is how the list published by that test's own author reaches 100 (it
+! carries `*$3p,domain=d3ward.github.io` and `d3ward.github.io##.textads`,
+! which only work on the test, so they are not used here).
+!
+! These four rules close the last four checks the test runs, and each one
+! targets a real, web-wide artifact rather than the test itself:
+!
+!   /pagead.js         the classic Google ad script filename, still served by
+!                      blogs and news sites everywhere as the gate for ad code
+!   /widget/ads.js     the ad-widget script filename
+!   .textads           an ad-container class name from the AdSense era
+!   .adsbox            the well-known ad-block-detection placeholder class
+!
+! The first two live here; the two class names are in src/cosmetic.css.
+! `/widget/ads.js` is written with a leading wildcard because the converter
+! drops a bare `/path/with/two/slashes` filter (it is misread as an option,
+! counted as "option: /" in the build log; five lines out of the published
+! lists hit the same edge). The wildcard form means the same thing.
+/pagead.js
+*/widget/ads.js

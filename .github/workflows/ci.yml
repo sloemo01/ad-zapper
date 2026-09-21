@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Manifest parses
+        run: node -e 'JSON.parse(require("fs").readFileSync("manifest.json","utf8")); console.log("manifest ok")'
+
+      - name: Rule sets parse
+        run: |
+          node -e '
+            const fs = require("fs");
+            const files = fs.readdirSync("rules").filter(f => f.endsWith(".json"));
+            for (const f of files) JSON.parse(fs.readFileSync("rules/" + f, "utf8"));
+            console.log(files.length + " rule sets parse");
+          '
+
+      - name: Test suites
+        run: |
+          fail=0
+          for f in test/*.test.js; do
+            echo "::group::$f"
+            node "$f" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: Smoke
+        run: node test/smoke.js

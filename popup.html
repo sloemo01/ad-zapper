@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #1d1d1f;
+    --ink-soft: #515154;
+    --ink-faint: #86868b;
+    --paper: #ffffff;
+    --line: rgba(0, 0, 0, 0.09);
+    --wash: rgba(0, 0, 0, 0.06);
+    --good: #1d9d4e;
+    --idle: #c7c7cc;
+  }
+  body {
+    font: 13px/1.5 system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 14px 16px 16px;
+    width: 248px;
+    color: var(--ink);
+    background: var(--paper);
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .head img {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+  }
+  .head span {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ink-soft);
+  }
+  .tally {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0;
+  }
+  .label {
+    margin: 2px 0 10px;
+    color: var(--ink-faint);
+  }
+  .detail {
+    margin: 0 0 6px;
+    color: var(--ink-soft);
+  }
+  .meta {
+    margin: 0 0 4px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--ink-faint);
+  }
+  .deep {
+    margin: 12px 0 0;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+  }
+  .deep-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--idle);
+    flex: none;
+  }
+  .dot.on {
+    background: var(--good);
+  }
+  .deep-text {
+    color: var(--ink-soft);
+  }
+  .deep-text b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  button {
+    font: inherit;
+    width: 100%;
+    color: #ffffff;
+    background: var(--ink);
+    border: 0;
+    border-radius: 7px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #333336;
+  }
+  button.ghost {
+    margin-top: 7px;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--line);
+  }
+  button.ghost:hover {
+    color: var(--ink);
+    background: var(--wash);
+  }
+  .modes {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .modes .seg {
+    flex: 1;
+    width: auto;
+    padding: 5px 0;
+    font-size: 11px;
+    color: var(--ink-faint);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .modes .seg:hover {
+    color: var(--ink-soft);
+    background: var(--wash);
+  }
+  .modes .seg.active {
+    color: var(--ink);
+    background: var(--wash);
+    border-color: transparent;
+  }
+  .head .switch {
+    margin-left: auto;
+    position: relative;
+    width: 36px;
+    height: 20px;
+    padding: 0;
+    flex: none;
+    border: 0;
+    border-radius: 999px;
+    background: var(--idle);
+    cursor: pointer;
+    transition: background 140ms ease;
+  }
+  .head .switch:hover {
+    filter: brightness(1.05);
+  }
+  .head .switch .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .head .switch[aria-checked="true"] {
+    background: var(--good);
+  }
+  .head .switch[aria-checked="true"] .knob {
+    transform: translateX(16px);
+  }
+  body.off .tally,
+  body.off .label {
+    color: var(--ink-faint);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f5f5f7;
+      --ink-soft: #c7c7cc;
+      --ink-faint: #98989d;
+      --paper: #1d1d1f;
+      --line: rgba(255, 255, 255, 0.12);
+      --wash: rgba(255, 255, 255, 0.1);
+      --good: #35c76a;
+      --idle: #48484a;
+    }
+    button {
+      color: #1d1d1f;
+      background: #f5f5f7;
+    }
+    button:hover {
+      background: #d8d8dd;
+    }
+    button.ghost {
+      color: var(--ink-soft);
+      background: transparent;
+    }
+    button.ghost:hover {
+      color: var(--ink);
+      background: var(--wash);
+    }
+    .modes .seg {
+      color: var(--ink-faint);
+      background: transparent;
+    }
+    .modes .seg:hover,
+    .modes .seg.active {
+      color: var(--ink);
+      background: var(--wash);
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="head">
+    <img src="icons/icon48.png" alt="">
+    <span>Ad Zapper</span>
+    <button id="power" class="switch" type="button" role="switch" aria-checked="true" title="Turn blocking on or off">
+      <span class="knob"></span>
+    </button>
+  </div>
+  <p class="tally" id="total">0</p>
+  <p class="label">ads blocked</p>
+  <p class="detail" id="detail">Nothing counted yet. Play a video that normally shows ads.</p>
+  <p class="detail" id="popups">No popups killed yet.</p>
+  <p class="meta" id="site">This site: nothing recorded yet.</p>
+  <div class="deep" id="deep">
+    <div class="deep-row">
+      <span class="dot" id="deepDot"></span>
+      <span class="deep-text" id="deepLabel">Deep block is idle</span>
+    </div>
+    <button id="pin" type="button">Deep block this site</button>
+    <div class="modes" id="modes">
+      <button class="seg" type="button" data-mode="smart" title="Attach where there is evidence">Smart</button>
+      <button class="seg" type="button" data-mode="always" title="Attach every http(s) tab">Always</button>
+      <button class="seg" type="button" data-mode="off" title="Never attach a debugger">Off</button>
+    </div>
+  </div>
+  <p class="meta" id="system">Engine parked</p>
+  <p class="meta" id="version">build unknown</p>
+  <details class="diag-box">
+    <summary>Probe</summary>
+    <pre id="diag" class="diag">asking the extension…</pre>
+  </details>
+  <button id="update" class="ghost" type="button">Update filter lists</button>
+  <button id="reset" class="ghost" type="button">Reset count</button>
+  <script src="popup.js"></script>
+</body>
+</html>

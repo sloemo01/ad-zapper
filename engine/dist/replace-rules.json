@@ -1,0 +1,222 @@
+[
+  {
+    "filter": "||www.youtube.com/playlist?list=$xhr,1p,replace=/\"adPlacements\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/playlist?list=$xhr,1p",
+    "pattern": "\"adPlacements\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||www.youtube.com/playlist?list=$xhr,1p,replace=/\"adSlots\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/playlist?list=$xhr,1p",
+    "pattern": "\"adSlots\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||www.youtube.com/watch?$xhr,1p,replace=/\"adPlacements\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/watch?$xhr,1p",
+    "pattern": "\"adPlacements\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||www.youtube.com/watch?$xhr,1p,replace=/\"adSlots\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/watch?$xhr,1p",
+    "pattern": "\"adSlots\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||www.youtube.com/youtubei/v1/player?$xhr,1p,replace=/\"adPlacements\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/youtubei/v1/player?$xhr,1p",
+    "pattern": "\"adPlacements\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||www.youtube.com/youtubei/v1/player?$xhr,1p,replace=/\"adSlots\"/\"no_ads\"/",
+    "matcher": "||www.youtube.com/youtubei/v1/player?$xhr,1p",
+    "pattern": "\"adSlots\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||youtube.com/youtubei/v1/get_watch?$xhr,1p,replace=/\"adPlacements\"/\"no_ads\"/",
+    "matcher": "||youtube.com/youtubei/v1/get_watch?$xhr,1p",
+    "pattern": "\"adPlacements\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||youtube.com/youtubei/v1/get_watch?$xhr,1p,replace=/\"adSlots\"/\"no_ads\"/",
+    "matcher": "||youtube.com/youtubei/v1/get_watch?$xhr,1p",
+    "pattern": "\"adSlots\"",
+    "replacement": "\"no_ads\"",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||facebook.com/api/graphql/$xhr,replace=/\\{\"node\":\\{\"role\":\"SEARCH_ADS\"[^\\n]+?cursor\":[^}]+\\}/{}/g,domain=web.facebook.com|www.facebook.com",
+    "matcher": "||facebook.com/api/graphql/$xhr,domain=web.facebook.com|www.facebook.com",
+    "pattern": "\\{\"node\":\\{\"role\":\"SEARCH_ADS\"[^\\n]+?cursor\":[^}]+\\}",
+    "replacement": "{}",
+    "flags": "g",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||facebook.com/api/graphql/$xhr,replace=/\\{\"node\":\\{\"__typename\":\"MarketplaceFeedAdStory\"[^\\n]+?\"cursor\":(?:null|\"\\{[^\\n]+?\\}\"|[^\\n]+?MarketplaceSearchFeedStoriesEdge\")\\}/{}/g,domain=web.facebook.com|www.facebook.com",
+    "matcher": "||facebook.com/api/graphql/$xhr,domain=web.facebook.com|www.facebook.com",
+    "pattern": "\\{\"node\":\\{\"__typename\":\"MarketplaceFeedAdStory\"[^\\n]+?\"cursor\":(?:null|\"\\{[^\\n]+?\\}\"|[^\\n]+?MarketplaceSearchFeedStoriesEdge\")\\}",
+    "replacement": "{}",
+    "flags": "g",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||facebook.com/api/graphql/$xhr,replace=/\\{\"node\":\\{\"__typename\":\"VideoHomeFeedUnitSectionComponent\"[^\\n]+?\"sponsored_data\":\\{\"ad_id\"[^\\n]+?\"cursor\":null\\}/{}/,domain=web.facebook.com|www.facebook.com",
+    "matcher": "||facebook.com/api/graphql/$xhr,domain=web.facebook.com|www.facebook.com",
+    "pattern": "\\{\"node\":\\{\"__typename\":\"VideoHomeFeedUnitSectionComponent\"[^\\n]+?\"sponsored_data\":\\{\"ad_id\"[^\\n]+?\"cursor\":null\\}",
+    "replacement": "{}",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||static.xx.fbcdn.net/rsrc.php/v*.js$script,replace=/\"__typename\":\"SponsoredData\"/\"__typename\":\"SponsorData\"/g",
+    "matcher": "||static.xx.fbcdn.net/rsrc.php/v*.js$script",
+    "pattern": "\"__typename\":\"SponsoredData\"",
+    "replacement": "\"__typename\":\"SponsorData\"",
+    "flags": "g",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||static.xx.fbcdn.net/rsrc.php/v*.js$script,replace=/return [a-zA-Z]\\(JSON\\.parse\\(m\\)\\)/return false/",
+    "matcher": "||static.xx.fbcdn.net/rsrc.php/v*.js$script",
+    "pattern": "return [a-zA-Z]\\(JSON\\.parse\\(m\\)\\)",
+    "replacement": "return false",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||static.xx.fbcdn.net/rsrc.php/v*.js$script,replace=/=document\\.body\\|\\|document\\.documentElement;/=document.body||document.documentElement;return false;/",
+    "matcher": "||static.xx.fbcdn.net/rsrc.php/v*.js$script",
+    "pattern": "=document\\.body\\|\\|document\\.documentElement;",
+    "replacement": "=document.body||document.documentElement;return false;",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||bild.de^$doc,replace=/\"adBlockWallEnabled\":true/\"adBlockWallEnabled\":false/",
+    "matcher": "||bild.de^$doc",
+    "pattern": "\"adBlockWallEnabled\":true",
+    "replacement": "\"adBlockWallEnabled\":false",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||welt.de/homadConfigEnabled.json$xhr,replace=/\"enabled\":true/\"enabled\":false/",
+    "matcher": "||welt.de/homadConfigEnabled.json$xhr",
+    "pattern": "\"enabled\":true",
+    "replacement": "\"enabled\":false",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||golem.de/staticrl/scripts/radiant/rmp-rl_$script,1p,replace=/var conf = \\{.*?'postrollAdTag': 'response\\.empty'\\s\\}\\;/var conf = {}/s",
+    "matcher": "||golem.de/staticrl/scripts/radiant/rmp-rl_$script,1p",
+    "pattern": "var conf = \\{.*?'postrollAdTag': 'response\\.empty'\\s\\}\\;",
+    "replacement": "var conf = {}",
+    "flags": "s",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||cinema.de/sites/default/files/js/js_$script,1p,replace=/var conf=\\{'globalConfig'.*?'vpaid':'true'\\};var exportz=/var conf={}; var exportz=/",
+    "matcher": "||cinema.de/sites/default/files/js/js_$script,1p",
+    "pattern": "var conf=\\{'globalConfig'.*?'vpaid':'true'\\};var exportz=",
+    "replacement": "var conf={}; var exportz=",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||svonm.com^$xhr,replace=/\"enabled\":\\s*true/\"enabled\":false/,domain=desired.de|giga.de|toggo.de",
+    "matcher": "||svonm.com^$xhr,domain=desired.de|giga.de|toggo.de",
+    "pattern": "\"enabled\":\\s*true",
+    "replacement": "\"enabled\":false",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||cdn.greenvideo.io/adapter/player/$script,replace=/window\\.__gv_org_tfa.*?templateData\\:\\{embedId\\:[a-z0-9]{1,3}\\}\\}\\)\\}\\)\\}\\}//",
+    "matcher": "||cdn.greenvideo.io/adapter/player/$script",
+    "pattern": "window\\.__gv_org_tfa.*?templateData\\:\\{embedId\\:[a-z0-9]{1,3}\\}\\}\\)\\}\\)\\}\\}",
+    "replacement": "",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||cdn.player.foundation/cdn-modules/$script,replace=/\\.homad\\.enabled\\)if\\(/.homad.enabled && false)if(/",
+    "matcher": "||cdn.player.foundation/cdn-modules/$script",
+    "pattern": "\\.homad\\.enabled\\)if\\(",
+    "replacement": ".homad.enabled && false)if(",
+    "flags": "",
+    "lists": [
+      "ubo-filters"
+    ]
+  },
+  {
+    "filter": "||bild.de^$doc,replace=/on(load|error)=\"[^\"]*?html-load\\.com[^\"]*?\"//g",
+    "matcher": "||bild.de^$doc",
+    "pattern": "on(load|error)=\"[^\"]*?html-load\\.com[^\"]*?\"",
+    "replacement": "",
+    "flags": "g",
+    "lists": [
+      "custom"
+    ]
+  }
+]

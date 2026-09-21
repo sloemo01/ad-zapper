@@ -1,0 +1,12 @@
+/*
+ * Hand-written generic element hiding: the selectors in here are not in any
+ * filter list this build ships, and each one is here for a reason written down
+ * in tools/lists/curated-rules.txt. Applied to every http(s) page, alongside
+ * the generated src/generic-cosmetic.css.
+ *
+ * Nothing in this file is scoped to any particular site.
+ */
+.textads,
+.adsbox {
+  display: none !important;
+}

@@ -1,0 +1,145 @@
+[
+ {
+  "id": 1,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||bild.de^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 2,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||cdn.greenvideo.io^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 3,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||cdn.player.foundation^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 4,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||cinema.de^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 5,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||facebook.com^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 6,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||golem.de^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 7,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||static.xx.fbcdn.net^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 8,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||svonm.com^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 9,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||welt.de^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 10,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||www.youtube.com^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ },
+ {
+  "id": 11,
+  "priority": 1000,
+  "action": {
+   "type": "allowAllRequests"
+  },
+  "condition": {
+   "urlFilter": "||youtube.com^",
+   "resourceTypes": [
+    "main_frame"
+   ]
+  }
+ }
+]

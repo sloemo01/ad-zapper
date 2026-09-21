@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ad Zapper CDP probe</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 28px 60px;
+      background: #101012;
+      color: #e8e8ea;
+      font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+      max-width: 880px;
+    }
+    h1 { font-size: 17px; margin: 0 0 4px; }
+    p.lede { margin: 0 0 18px; color: #9a9aa2; }
+    section { border: 1px solid #2a2a30; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+    h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #9a9aa2; margin: 0 0 10px; }
+    label.row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+    select, button {
+      font: inherit; color: inherit; background: #1d1d21;
+      border: 1px solid #33333a; border-radius: 7px; padding: 6px 10px;
+    }
+    select { max-width: 100%; }
+    button { cursor: pointer; }
+    button:hover { background: #24242a; }
+    button.primary { background: #2c5c3f; border-color: #3a7a54; }
+    button.primary:hover { background: #33704c; }
+    button.stop { background: #5c2c2c; border-color: #7a3a3a; }
+    .buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .cell { background: #17171b; border: 1px solid #2a2a30; border-radius: 8px; padding: 8px 10px; }
+    .cell b { display: block; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+    .cell span { color: #9a9aa2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .state { font-size: 12px; color: #9a9aa2; margin-top: 10px; }
+    .state.on { color: #7fd29a; }
+    .state.err { color: #f08a8a; }
+    pre { background: #17171b; border: 1px solid #2a2a30; border-radius: 8px; padding: 10px;
+      overflow: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 10px 0 0; max-height: 260px; }
+    details summary { cursor: pointer; color: #9a9aa2; }
+    details ol { margin: 10px 0 0 18px; padding: 0; color: #c9c9d0; }
+    details li { margin: 4px 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #1d1d21; padding: 1px 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Ad Zapper CDP probe</h1>
+  <p class="lede">Measures what intercepting every request through chrome.debugger costs, and proves block + HTML rewrite work. Runtime only, nothing is stored outside this browser session.</p>
+
+  <section>
+    <h2>Target tab</h2>
+    <label class="row">Tab <select id="tab"></select></label>
+    <div class="buttons"><button id="refresh">Refresh list</button></div>
+  </section>
+
+  <section>
+    <h2>Interception</h2>
+    <label class="row"><input type="checkbox" id="block"> Enforce the probe blocklist (fail matching requests)</label>
+    <label class="row"><input type="checkbox" id="rewrite"> Rewrite HTML documents (replaces the page title with CDP-REWRITE-OK)</label>
+    <div class="buttons">
+      <button id="attach" class="primary">Attach &amp; start</button>
+      <button id="detach" class="stop">Stop &amp; detach</button>
+      <button id="clear">Clear stats</button>
+      <button id="copy">Copy JSON</button>
+    </div>
+    <div id="state" class="state">Not attached.</div>
+  </section>
+
+  <section>
+    <h2>Measurements</h2>
+    <div class="grid" id="cells"></div>
+    <pre id="types">resource types will land here</pre>
+    <pre id="loads">load timing will land here</pre>
+    <pre id="errors">errors will land here</pre>
+  </section>
+
+  <section>
+    <details>
+      <summary>How to run the drill</summary>
+      <ol>
+        <li>Reload the target tab <em>before</em> attaching. That load is your baseline; it shows up under load timing.</li>
+        <li>Pick the tab above, tick the boxes you want, hit <code>Attach &amp; start</code>. The tab gets a "started debugging this browser" banner. DevTools can no longer attach to it while the probe is running.</li>
+        <li>Reload the target tab, then scroll it for twenty or thirty seconds. The reload after attach is the number that matters.</li>
+        <li>With rewrite on, the target tab's title becomes CDP-REWRITE-OK, which is the proof that the response body was edited before the page saw it.</li>
+        <li>Hit <code>Stop &amp; detach</code> and compare p95 handling time plus the attached load time against the baseline. Under about 5 ms p95 and loads within roughly 20% of baseline means this door is usable.</li>
+      </ol>
+    </details>
+  </section>
+
+  <script src="probe.js"></script>
+</body>
+</html>

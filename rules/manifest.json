@@ -1,0 +1,44 @@
+{
+  "rule_resources": [
+    {
+      "id": "dnr_1",
+      "enabled": true,
+      "path": "rules/dnr_1.json"
+    },
+    {
+      "id": "dnr_2",
+      "enabled": true,
+      "path": "rules/dnr_2.json"
+    },
+    {
+      "id": "dnr_3",
+      "enabled": true,
+      "path": "rules/dnr_3.json"
+    },
+    {
+      "id": "dnr_4",
+      "enabled": true,
+      "path": "rules/dnr_4.json"
+    },
+    {
+      "id": "dnr_5",
+      "enabled": true,
+      "path": "rules/dnr_5.json"
+    },
+    {
+      "id": "dnr_6",
+      "enabled": true,
+      "path": "rules/dnr_6.json"
+    },
+    {
+      "id": "dnr_7",
+      "enabled": true,
+      "path": "rules/dnr_7.json"
+    },
+    {
+      "id": "dnr_8",
+      "enabled": true,
+      "path": "rules/dnr_8.json"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "ad-zapper",
+  "version": "2.7.22",
+  "description": "Chrome MV3 ad blocker: filter engine, page-world ad stripping, and a CDP layer for sites that detect blockers.",
+  "main": "popup.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "for f in test/*.test.js; do node \"$f\" || exit 1; done && node test/smoke.js"
+  },
+  "keywords": [
+    "adblock",
+    "chrome-extension",
+    "manifest-v3",
+    "easylist"
+  ],
+  "author": "Nehal Kanak",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@ghostery/adblocker": "^2.18.2",
+    "esbuild": "^0.28.2"
+  }
+}
