@@ -52,6 +52,9 @@ jobs:
         run: |
           bash -n install/install-macos.sh
           bash install/install-macos.sh --dry-run
+          AD_ZAPPER_DIR="$RUNNER_TEMP/az" bash install/install-macos.sh --download-only
+          test -f "$RUNNER_TEMP/az/manifest.json"
+          test "$(ls "$RUNNER_TEMP/az"/rules/*.json | wc -l)" -ge 10
           pwsh -NoProfile -File install/parse-check.ps1
 
       - name: Smoke

@@ -250,21 +250,30 @@ Numbers live in `chrome.storage.local`, so they are per browser profile and surv
 ### macOS
 
 ```
-git clone https://github.com/sloemo01/ad-zapper.git
-cd ad-zapper
-./install/install-macos.sh
+curl -fsSL https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-macos.sh -o /tmp/ad-zapper.sh
+bash /tmp/ad-zapper.sh
 ```
+
+Piping straight into bash works too, but stdin is the script then, so the pause before the test
+page does not work: `curl -fsSL .../install-macos.sh | bash`.
 
 ### Windows
 
-In PowerShell, from the cloned folder:
-
 ```
-powershell -NoProfile -ExecutionPolicy Bypass -File install\install-windows.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/sloemo01/ad-zapper/main/install/install-windows.ps1 -OutFile $env:TEMP\ad-zapper.ps1; & $env:TEMP\ad-zapper.ps1"
 ```
 
-or double-click `install\install-windows.cmd`. Add `--dry-run` (macOS) or `-DryRun` (Windows) to
-see what it would do without touching the clipboard or opening a browser.
+There is also `install\install-windows.cmd` for double-clicking after a clone.
+
+### What the script does with the folder
+
+It works the same whether you cloned the repository or not. Inside a checkout it installs that
+folder. Anywhere else it downloads the newest `main` from GitHub, unpacks it into a folder that
+stays put (`~/Applications/Ad Zapper` on macOS, `%LOCALAPPDATA%\Ad Zapper` on Windows) and
+installs from there. Running it again replaces that folder with the newest version, which is how
+you update. Both scripts take `--dry-run` / `-DryRun` to report without downloading or touching
+Chrome, `--download` / `-Download` to force a fresh copy, and `--download-only` / `-DownloadOnly`
+to fetch and check the files and stop before Chrome.
 
 ### What the scripts can and cannot do
 

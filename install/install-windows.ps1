@@ -1,21 +1,108 @@
-# Walks you from a cloned folder to a loaded extension in Chrome: checks the
-# checkout, opens chrome://extensions with the folder path on your clipboard,
-# waits while you click Load unpacked, then opens a page and says what to look
-# for, including the debugger bar.
+# Gets Chrome to a loaded Ad Zapper, from a clone or from nothing.
 #
-# Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File install-windows.ps1 [-DryRun]
+# Inside a checkout it uses that folder. Anywhere else (a downloaded copy, or a
+# fresh machine) it fetches the newest main from GitHub into a permanent folder
+# and installs from there. Then it opens chrome://extensions with the folder
+# path on your clipboard, waits while you click Load unpacked, and opens a page
+# to check it on.
 #
-param([switch]$DryRun)
+# Usage:
+#   install-windows.ps1                 # install, from a clone or by download
+#   install-windows.ps1 -Download       # force a fresh download
+#   install-windows.ps1 -DownloadOnly   # fetch and check it, stop before Chrome
+#   install-windows.ps1 -DryRun         # report only, no downloads, no browser
+#
+# $env:AD_ZAPPER_DIR overrides where the downloaded copy lives.
+#
+param(
+  [switch]$DryRun,
+  [switch]$Download,
+  [switch]$DownloadOnly
+)
 
 $ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$Repo = 'sloemo01/ad-zapper'
+$Ref = 'main'
+$Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:LOCALAPPDATA 'Ad Zapper' }
 
 function Say($message) { Write-Host $message }
 
 Say "Ad Zapper installer"
 Say ""
 
-# 1. Chrome
+# 1. Where does the extension come from?
+$Src = $null
+if ($PSScriptRoot) {
+  $candidate = Join-Path $PSScriptRoot '..'
+  if (Test-Path (Join-Path $candidate 'manifest.json')) {
+    $Src = (Resolve-Path $candidate).Path
+  }
+}
+
+$needDownload = $Download -or $DownloadOnly -or (-not $Src)
+
+if ($DryRun) {
+  if ($needDownload) {
+    Say "1/4  dry run: would download github.com/$Repo ($Ref) into:"
+    Say "       $Target"
+  } else {
+    Say "1/4  dry run: would use the checkout at $Src"
+  }
+} elseif ($needDownload) {
+  Say "1/4  fetching the newest $Ref from github.com/$Repo ..."
+  $tmp = Join-Path $env:TEMP ("ad-zapper-" + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+  try {
+    $zip = Join-Path $tmp 'src.zip'
+    Invoke-WebRequest -Uri "https://codeload.github.com/$Repo/zip/refs/heads/$Ref" -OutFile $zip -UseBasicParsing
+    Expand-Archive -Path $zip -DestinationPath $tmp -Force
+    $inner = Get-ChildItem $tmp -Directory | Select-Object -First 1
+    if (-not $inner) { Say "the archive did not contain the expected folder"; exit 1 }
+    $parent = Split-Path -Parent $Target
+    if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }
+    if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
+    Move-Item $inner.FullName $Target
+    $Src = $Target
+    Say "      downloaded into $Src"
+  } catch {
+    Say "the download failed: $($_.Exception.Message)"
+    Say "Check the network, then rerun, or install from a clone:"
+    Say "  git clone https://github.com/$Repo.git"
+    Say "  cd ad-zapper"
+    Say "  powershell -NoProfile -ExecutionPolicy Bypass -File install\install-windows.ps1"
+    exit 1
+  } finally {
+    if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+  }
+} else {
+  Say "1/4  using the checkout at $Src"
+}
+
+# 2. The folder has to be a working extension
+if ($DryRun) {
+  Say "2/4  dry run: manifest and rule sets left unchecked."
+} else {
+  foreach ($relative in @('manifest.json', 'rules\dnr_1.json', 'src\background.js')) {
+    if (-not (Test-Path (Join-Path $Src $relative))) {
+      Say "missing $relative"
+      Say "That folder is not a complete copy of the extension."
+      exit 1
+    }
+  }
+  $null = Get-Content (Join-Path $Src 'manifest.json') -Raw | ConvertFrom-Json
+  $sets = Get-ChildItem (Join-Path $Src 'rules\*.json')
+  foreach ($set in $sets) { $null = Get-Content $set.FullName -Raw | ConvertFrom-Json }
+  Say "2/4  manifest and $($sets.Count) rule sets parse."
+}
+
+if ($DownloadOnly) {
+  Say ""
+  Say "Done. The extension is ready to load from:"
+  Say "  $Src"
+  exit 0
+}
+
+# 3. Chrome
 $candidates = @(
   (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
   (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'),
@@ -25,44 +112,26 @@ $chrome = $candidates | Select-Object -First 1
 
 if (-not $chrome) {
   if ($DryRun) {
-    Say "1/3  Chrome is not in the usual places (fine for a dry run)."
+    Say "3/4  Chrome is not in the usual places (fine for a dry run)."
   } else {
-    Say "1/3  Chrome is not in the usual places."
-    Say "Install Google Chrome first, or load the folder by hand: chrome://extensions,"
-    Say "Developer mode, Load unpacked, then pick:"
-    Say "  $Root"
+    Say "3/4  Chrome is not in the usual places."
+    Say "Install Google Chrome, then load the folder by hand: chrome://extensions, Developer"
+    Say "mode, Load unpacked, and pick:"
+    Say "  $Src"
     exit 1
   }
 } else {
-  Say "1/3  Chrome found at $chrome"
+  Say "3/4  Chrome found at $chrome"
 }
 
-# 2. The folder has to be a working extension
-foreach ($relative in @('manifest.json', 'rules\dnr_1.json', 'src\background.js')) {
-  if (-not (Test-Path (Join-Path $Root $relative))) {
-    Say "missing $relative"
-    Say "This is not a full checkout of the repository. Clone or download it again, then rerun."
-    exit 1
-  }
-}
-
-$null = Get-Content (Join-Path $Root 'manifest.json') -Raw | ConvertFrom-Json
-$sets = Get-ChildItem (Join-Path $Root 'rules\*.json')
-foreach ($set in $sets) { $null = Get-Content $set.FullName -Raw | ConvertFrom-Json }
-Say "2/3  manifest and $($sets.Count) rule sets parse."
-
-# 3. Clipboard, then the extension page
 if ($DryRun) {
-  Say "3/3  dry run: clipboard and browser left alone."
-  Say ""
-  Say "Would have opened chrome://extensions with this path on the clipboard:"
-  Say "  $Root"
+  Say "4/4  dry run: clipboard and browser left alone."
   exit 0
 }
 
-Set-Clipboard -Value $Root
+Set-Clipboard -Value $Src
 Start-Process $chrome -ArgumentList 'chrome://extensions'
-Say "3/3  chrome://extensions is open, and the folder path is on your clipboard."
+Say "4/4  chrome://extensions is open, and the folder path is on your clipboard."
 Say ""
 Say "In Chrome, four steps:"
 Say "  1. Developer mode, the toggle at the top right."

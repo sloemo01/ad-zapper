@@ -1,51 +1,97 @@
 #!/usr/bin/env bash
 #
-# Walks you from a cloned folder to a loaded extension in Chrome: checks the
-# checkout, opens chrome://extensions with the folder path on your clipboard,
-# waits while you click Load unpacked, then opens a page and says what to look
-# for, including the debugger bar.
+# Gets Chrome to a loaded Ad Zapper, from a clone or from nothing.
 #
-# Usage:  ./install/install-macos.sh [--dry-run]
+# Inside a checkout it uses that folder. Anywhere else (a downloaded copy, or a
+# fresh machine) it fetches the newest main from GitHub into a permanent folder
+# and installs from there. Then it opens chrome://extensions with the folder
+# path on your clipboard, waits while you click Load unpacked, and opens a page
+# to check it on.
+#
+# Usage:
+#   ./install/install-macos.sh                 # install, from a clone or by download
+#   ./install/install-macos.sh --download      # force a fresh download
+#   ./install/install-macos.sh --download-only # fetch and check it, stop before Chrome
+#   ./install/install-macos.sh --dry-run       # report only, no downloads, no browser
+#
+# AD_ZAPPER_DIR overrides where the downloaded copy lives.
 #
 set -euo pipefail
 
-DRY=0
-[[ "${1:-}" == "--dry-run" ]] && DRY=1
+REPO="sloemo01/ad-zapper"
+REF="main"
+TARGET="${AD_ZAPPER_DIR:-$HOME/Applications/Ad Zapper}"
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MODE="install"
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) MODE="dry" ;;
+    --download) MODE="download" ;;
+    --download-only) MODE="download-only" ;;
+    *) echo "unknown option: $arg"; exit 2 ;;
+  esac
+done
+
 say() { printf '%s\n' "$*"; }
 
 say "Ad Zapper installer"
 say ""
 
-# 1. Chrome
-CHROME="/Applications/Google Chrome.app"
-if [[ ! -d "$CHROME" ]]; then
-  if [[ $DRY -eq 1 ]]; then
-    say "1/3  Chrome is not in /Applications (fine for a dry run)."
+# 1. Where does the extension come from?
+SRC=""
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
+  CAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  [[ -f "$CAND/manifest.json" ]] && SRC="$CAND"
+fi
+
+need_download=0
+case "$MODE" in
+  download|download-only) need_download=1 ;;
+  *) [[ -z "$SRC" ]] && need_download=1 ;;
+esac
+
+if [[ $MODE == "dry" ]]; then
+  if [[ $need_download -eq 1 ]]; then
+    say "1/3  dry run: would download github.com/$REPO ($REF) into:"
+    say "       $TARGET"
   else
-    say "1/3  Chrome is not in /Applications."
-    say "Install Google Chrome first, or load the folder by hand: chrome://extensions,"
-    say "Developer mode, Load unpacked, then pick:"
-    say "  $ROOT"
+    say "1/3  dry run: would use the checkout at $SRC"
+  fi
+elif [[ $need_download -eq 1 ]]; then
+  say "1/3  fetching the newest $REF from github.com/$REPO ..."
+  command -v curl >/dev/null 2>&1 || { say "curl is not installed, and this needs it to download"; exit 1; }
+  TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
+  if ! curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/$REF" -o "$TMP/src.tar.gz"; then
+    say "the download failed. Check the network, then rerun, or install from a clone:"
+    say "  git clone https://github.com/$REPO.git && cd ad-zapper && ./install/install-macos.sh"
     exit 1
   fi
+  tar -xzf "$TMP/src.tar.gz" -C "$TMP"
+  INNER="$(find "$TMP" -maxdepth 1 -type d -name 'ad-zapper-*' | head -1)"
+  [[ -n "$INNER" ]] || { say "the archive did not contain the expected folder"; exit 1; }
+  mkdir -p "$(dirname "$TARGET")"
+  rm -rf "$TARGET"
+  mv "$INNER" "$TARGET"
+  SRC="$TARGET"
+  say "      downloaded $(du -sh "$SRC" | cut -f1) into $SRC"
 else
-  say "1/3  Chrome found."
+  say "1/3  using the checkout at $SRC"
 fi
 
-# 2. The folder has to be a working extension
-missing=0
-for f in manifest.json rules/dnr_1.json src/background.js; do
-  [[ -f "$ROOT/$f" ]] || { say "missing $f"; missing=1; }
-done
-if [[ $missing -eq 1 ]]; then
-  say "This is not a full checkout of the repository. Clone or download it again, then rerun."
-  exit 1
-fi
-
-if command -v python3 >/dev/null 2>&1; then
-  python3 - "$ROOT" <<'PY' || { say "a file failed to parse, the checkout is damaged"; exit 1; }
+if [[ $MODE == "dry" ]]; then
+  say "2/3  dry run: manifest and rule sets left unchecked."
+else
+  missing=0
+  for f in manifest.json rules/dnr_1.json src/background.js; do
+    [[ -f "$SRC/$f" ]] || { say "missing $f"; missing=1; }
+  done
+  if [[ $missing -eq 1 ]]; then
+    say "That folder is not a complete copy of the extension."
+    exit 1
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$SRC" <<'PY' || { say "a file failed to parse, something is damaged"; exit 1; }
 import glob, json, sys
 root = sys.argv[1]
 json.load(open(root + "/manifest.json"))
@@ -54,22 +100,42 @@ for path in files:
     json.load(open(path))
 print("2/3  manifest and %d rule sets parse." % len(files))
 PY
-else
-  say "2/3  python3 is not installed, so the file check is skipped."
+  else
+    say "2/3  python3 is not installed, so the file check is skipped."
+  fi
 fi
 
-# 3. Clipboard, then the extension page
-if [[ $DRY -eq 1 ]]; then
-  say "3/3  dry run: clipboard and browser left alone."
+if [[ $MODE == "download-only" ]]; then
   say ""
-  say "Would have opened chrome://extensions with this path on the clipboard:"
-  say "  $ROOT"
+  say "Done. The extension is ready to load from:"
+  say "  $SRC"
   exit 0
 fi
 
-printf '%s' "$ROOT" | pbcopy
+# 3. Chrome
+CHROME="/Applications/Google Chrome.app"
+if [[ ! -d "$CHROME" ]]; then
+  if [[ $MODE == "dry" ]]; then
+    say "3/4  Chrome is not in /Applications (fine for a dry run)."
+  else
+    say "3/4  Chrome is not in /Applications."
+    say "Install Google Chrome, then load the folder by hand: chrome://extensions, Developer"
+    say "mode, Load unpacked, and pick:"
+    say "  $SRC"
+    exit 1
+  fi
+else
+  say "3/4  Chrome found."
+fi
+
+if [[ $MODE == "dry" ]]; then
+  say "4/4  dry run: clipboard and browser left alone."
+  exit 0
+fi
+
+printf '%s' "$SRC" | pbcopy
 open -a "Google Chrome" "chrome://extensions" 2>/dev/null || open -a "Google Chrome" || true
-say "3/3  chrome://extensions is open, and the folder path is on your clipboard."
+say "4/4  chrome://extensions is open, and the folder path is on your clipboard."
 say ""
 say "In Chrome, four steps:"
 say "  1. Developer mode, the toggle at the top right."
