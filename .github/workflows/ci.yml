@@ -26,15 +26,42 @@ jobs:
             console.log(files.length + " rule sets parse");
           '
 
+      # Every suite runs even when an earlier one fails, so one red suite does
+      # not hide the state of the other thirteen. The step fails at the end.
       - name: Test suites
         run: |
+          : > "$RUNNER_TEMP/suites.txt"
           fail=0
           for f in test/*.test.js; do
-            echo "::group::$f"
-            node "$f" || fail=1
+            name=$(basename "$f")
+            echo "::group::$name"
+            if node "$f"; then
+              echo "ok    $name" >> "$RUNNER_TEMP/suites.txt"
+            else
+              echo "FAIL  $name" >> "$RUNNER_TEMP/suites.txt"
+              fail=1
+            fi
             echo "::endgroup::"
           done
+          cat "$RUNNER_TEMP/suites.txt"
           exit $fail
 
       - name: Smoke
-        run: node test/smoke.js
+        if: always()
+        run: |
+          if node test/smoke.js; then
+            echo "ok    smoke" >> "$RUNNER_TEMP/suites.txt"
+          else
+            echo "FAIL  smoke" >> "$RUNNER_TEMP/suites.txt"
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Suites" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/suites.txt" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "ran: $(wc -l < "$RUNNER_TEMP/suites.txt" | tr -d ' ')  failed: $(grep -c '^FAIL' "$RUNNER_TEMP/suites.txt" || true)"
+          test "$(grep -c '^FAIL' "$RUNNER_TEMP/suites.txt" || true)" = "0"
