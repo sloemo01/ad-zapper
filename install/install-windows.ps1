@@ -1,6 +1,7 @@
-# Puts Ad Zapper in front of you in Chrome, with the folder path on the
-# clipboard so "Load unpacked" is one paste away. Everything it can check, it
-# checks first; the two clicks Chrome requires are the only manual part.
+# Walks you from a cloned folder to a loaded extension in Chrome: checks the
+# checkout, opens chrome://extensions with the folder path on your clipboard,
+# waits while you click Load unpacked, then opens a page and says what to look
+# for, including the debugger bar.
 #
 # Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File install-windows.ps1 [-DryRun]
 #
@@ -40,7 +41,7 @@ if (-not $chrome) {
 foreach ($relative in @('manifest.json', 'rules\dnr_1.json', 'src\background.js')) {
   if (-not (Test-Path (Join-Path $Root $relative))) {
     Say "missing $relative"
-    Say "This is not a full checkout of the repository. Download or clone it again, then rerun."
+    Say "This is not a full checkout of the repository. Clone or download it again, then rerun."
     exit 1
   }
 }
@@ -50,20 +51,36 @@ $sets = Get-ChildItem (Join-Path $Root 'rules\*.json')
 foreach ($set in $sets) { $null = Get-Content $set.FullName -Raw | ConvertFrom-Json }
 Say "2/3  manifest and $($sets.Count) rule sets parse."
 
-# 3. Clipboard and browser
+# 3. Clipboard, then the extension page
 if ($DryRun) {
   Say "3/3  dry run: clipboard and browser left alone."
-} else {
-  Set-Clipboard -Value $Root
-  Start-Process $chrome -ArgumentList 'chrome://extensions'
-  Say "3/3  the folder path is on your clipboard and chrome://extensions is open."
+  Say ""
+  Say "Would have opened chrome://extensions with this path on the clipboard:"
+  Say "  $Root"
+  exit 0
 }
 
+Set-Clipboard -Value $Root
+Start-Process $chrome -ArgumentList 'chrome://extensions'
+Say "3/3  chrome://extensions is open, and the folder path is on your clipboard."
 Say ""
-Say "Three clicks left, in Chrome:"
-Say "  1. Turn on Developer mode, top right."
-Say "  2. Click Load unpacked, then paste the path (Ctrl+V) and press Select Folder."
-Say "  3. Open any site and check the counter on the toolbar icon."
+Say "In Chrome, four steps:"
+Say "  1. Developer mode, the toggle at the top right."
+Say "  2. Load unpacked, top left. In the folder dialog, paste the path (Ctrl+V) into"
+Say "     the File name box and press Enter, then Select Folder."
+Say "  3. Chrome shows a dialog listing what the extension can do, Debugger among the"
+Say "     entries. That permission is what lets one layer inspect requests on the sites"
+Say "     that need it. Click Add extension."
+Say "  4. The card appears. Pin the toolbar icon if you want the counter in view."
 Say ""
-Say "Chrome asks about the debugger permission. One layer of the extension uses it on"
-Say "the sites that need it; declining costs only that layer."
+Say "Press Enter once the card is showing, and this opens a page to test it on."
+[void](Read-Host)
+Start-Process $chrome -ArgumentList 'https://www.youtube.com/'
+Say ""
+Say "Chrome is on YouTube. What to look for:"
+Say "  - the toolbar icon counts up once ads are stopped."
+Say "  - a bar under the address bar reading ""Ad Zapper started debugging this browser""."
+Say "    That is the deep block attaching. It only shows on sites that need it, and it"
+Say "    goes away on its own."
+Say "  - DevTools (Ctrl+Shift+J) shows [yt-ad-zapper] lines on YouTube and [ad-zapper:deep]"
+Say "    lines anywhere the deep block attached."

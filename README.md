@@ -272,16 +272,23 @@ Neither script finishes the job, because Chrome does not allow it: an unpacked e
 by a person, and no supported API or installer can put one into a profile you are already signed
 into. What the scripts do is everything around that. They check that Chrome is where it should be,
 check that the checkout is complete and that the manifest and all ten rule sets parse, put the
-folder path on your clipboard, and open `chrome://extensions`. Then it is three clicks:
+folder path on your clipboard, and open `chrome://extensions`. Then it is four steps:
 
-1. Turn on Developer mode, top right.
-2. Load unpacked, paste the path, and press Open.
-3. Open a site that has ads and check the counter on the toolbar icon.
+1. Developer mode, the toggle at the top right.
+2. Load unpacked, top left. In the file dialog press Cmd+Shift+G (macOS) or Ctrl+V (Windows),
+   paste, and press Open.
+3. Chrome shows a dialog listing what the extension can do, Debugger among the entries. That
+   permission is what lets one layer inspect requests on the sites that need it. Click Add
+   extension.
+4. The card appears. Pin the toolbar icon if you want the counter in view.
 
-Chrome asks you to accept "read and change all your data" and the debugger permission. The first
-is the rule sets; the second is the layer that inspects requests on the sites that need it, and
-declining it costs only that layer. After editing any file, hit the reload button on the extension
-card.
+The installer then waits, and once the card is showing you press Enter and it opens YouTube for
+you. What to look for there: the toolbar icon counts up as ads are stopped, DevTools
+(Cmd+Option+J, or Ctrl+Shift+J) shows `[yt-ad-zapper]` lines, and a bar under the address bar
+reads "Ad Zapper started debugging this browser" on the sites where the deep block attaches. That
+bar is the debugger permission in action, and it clears itself.
+
+After editing any file, hit the reload button on the extension card.
 
 ## Checking it works
 
