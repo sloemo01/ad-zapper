@@ -1094,6 +1094,17 @@ const HIDING_FILES = ['src/cosmetic.css', 'src/generic-cosmetic.css'];
 // sheet is applied.
 const WALLED_HIDING_FILES = ['src/cosmetic.css'];
 
+// The learned sheet is this extension's own guesswork, so it never lands on the
+// hosts everything depends on. A wrong guess there costs more than any ad.
+const isProtectedUrl = (url) => {
+  try {
+    const clean = new URL(String(url || '')).hostname.replace(/^www\./, '');
+    return PROTECTED.has(clean) || PROTECTED.has(apexOf(clean));
+  } catch (_) {
+    return false;
+  }
+};
+
 const isWalledUrl = (url) => {
   try {
     const host = new URL(String(url || '')).hostname;
@@ -1157,7 +1168,9 @@ const injectHiding = async (tabId, frameIds, url) => {
     // The selectors this layer has learned from two or more sites. Kept as one
     // string because insertCSS and removeCSS only match on identical text.
     const learned = detect ? await detect.learnedCss() : '';
-    if (learned) await chrome.scripting.insertCSS({ target, css: learned, origin: 'USER' });
+    if (learned && !isProtectedUrl(url)) {
+      await chrome.scripting.insertCSS({ target, css: learned, origin: 'USER' });
+    }
     return true;
   } catch (_) {
     return false;

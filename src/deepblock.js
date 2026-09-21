@@ -300,6 +300,26 @@ const suffixHit = (host, set) => {
   }
 };
 
+// Tooling and code hosts. There is almost no advertising on them, and a rewritten
+// response there breaks something the person is in the middle of using.
+const NEVER_ATTACH = [
+  'github.com',
+  'githubusercontent.com',
+  'githubassets.com',
+  'github.io',
+  'gitlab.com',
+  'stackoverflow.com',
+  'npmjs.com',
+  'localhost',
+  '127.0.0.1'
+];
+
+const neverAttach = (host) => {
+  const clean = String(host || '').trim().toLowerCase().replace(/^www\./, '');
+  if (!clean) return false;
+  return NEVER_ATTACH.some((base) => clean === base || clean.endsWith('.' + base));
+};
+
 const isAttachable = (url) => {
   const value = String(url || '');
   if (!value) return false;
@@ -429,6 +449,14 @@ const attach = async (tabId, url, reason) => {
   if (!isAttachable(url)) return false;
 
   const host = hostOf(url);
+
+  // Response rewriting is the riskiest thing this layer does, and on the sites
+  // people live in while working, one wrong rewrite costs more than every ad on
+  // the page. Those hosts are not offered a session at all.
+  if (neverAttach(host)) {
+    diagAdd({ k: 'attach-skipped', host, why: 'never attach' });
+    return false;
+  }
 
   // What the ledger says about this host, before the mechanical checks: a host
   // whose ads the page world and the rule sets already handle is not worth a CDP

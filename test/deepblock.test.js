@@ -944,6 +944,19 @@ const check = async (name, fn) => {
     assert(!calls.slice(before).some((call) => call.op === 'attach'), 'the debugger was touched anyway');
   });
 
+  await check('the tooling hosts are never offered a session', async () => {
+    const attached = await deep.attach(7799, 'https://github.com/sloemo01/ad-zapper', 'pinned');
+    assert(attached === false, 'github.com was attached to');
+    assert(
+      deep.state().attached.every((entry) => entry.tabId !== 7799),
+      'a github.com session is listed'
+    );
+    const verified = await deep.attach(7800, 'https://github.com/', 'page signal');
+    assert(verified === false, 'a page signal attach still went through on github.com');
+    const nested = await deep.attach(7801, 'https://gist.github.com/x', 'always');
+    assert(nested === false, 'a github subdomain was attached to');
+  });
+
   await check('a pin outranks the ledger, but not the page-world rule', async () => {
     sandbox.AdblockerSmart.deepVerdict = realVerdict;
     await sandbox.AdblockerSmart.deepEvent('pinned.test', { deepSessions: 3 });
