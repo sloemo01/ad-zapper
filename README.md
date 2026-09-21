@@ -30,10 +30,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubus
 
 There is also `install\install-windows.cmd` for double-clicking after a clone.
 
-### Releases, if you would rather not run a script
-
-Every tag publishes a release with four things: the extension as a zip (`unzip it, then chrome://extensions, Developer mode, Load unpacked`), the macOS installer, the Windows installer as a `.ps1` and a `.cmd`, and `AdZapper-Setup.exe`, which is the Windows installer wrapped into a double-clickable program by the release workflow. The exe is unsigned, so Windows will warn about it; the scripts are published beside it for anyone who wants to read them first.
-
 ### What the script does with the folder
 
 It works the same whether you cloned the repository or not. Inside a checkout it installs that
