@@ -37,6 +37,16 @@ const UPDATE_CHECK_MINUTES = 360;
 const UPDATE_API = 'https://api.github.com/repos/sloemo01/ad-zapper/contents/manifest.json';
 const UPDATE_CDN = 'https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper@main/manifest.json';
 
+// What the update button copies. The update-only path checks the version before
+// downloading anything, swaps the folder when there is something newer, and leaves
+// the marker that makes the extension reload itself into it.
+const UPDATE_COMMANDS = {
+  mac:
+    'curl -fsSL https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper@main/install/install-macos.sh -o /tmp/ad-zapper.sh && bash /tmp/ad-zapper.sh --update-only',
+  win:
+    'powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://cdn.jsdelivr.net/gh/sloemo01/ad-zapper/main/install/install-windows.ps1 -OutFile $env:TEMP\\ad-zapper.ps1; & $env:TEMP\\ad-zapper.ps1 -UpdateOnly"'
+};
+
 const versionParts = (version) =>
   String(version || '')
     .split(/[.+-]/)
@@ -62,6 +72,22 @@ const runningVersion = () => {
     return (chrome.runtime.getManifest() || {}).version || '0';
   } catch (_) {
     return '0';
+  }
+};
+
+const platform = async () => {
+  try {
+    const info = await chrome.runtime.getPlatformInfo();
+    if (info && info.os === 'win') return 'win';
+    if (info && info.os === 'mac') return 'mac';
+    return 'other';
+  } catch (_) {
+    try {
+      const agent = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+      if (/Windows/i.test(agent)) return 'win';
+      if (/Mac/i.test(agent)) return 'mac';
+    } catch (_) {}
+    return 'other';
   }
 };
 
@@ -174,7 +200,10 @@ const start = () => {
 
 const stats = async () => {
   const state = await readState();
+  const os = await platform();
   return {
+    os,
+    command: UPDATE_COMMANDS[os] || null,
     running: runningVersion(),
     latest: state.latest || null,
     newer: !!state.newer,

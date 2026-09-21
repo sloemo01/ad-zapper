@@ -85,6 +85,7 @@ const TAB_INFO_MESSAGE = 'yt-ad-zapper:tab-info';
 const PIN_MESSAGE = 'yt-ad-zapper:pin';
 const SETTINGS_MESSAGE = 'yt-ad-zapper:settings';
 const POWER_MESSAGE = 'yt-ad-zapper:power';
+const SELF_UPDATE_MESSAGE = 'yt-ad-zapper:self-update';
 const BADGE_OFF_COLOR = '#8e8e93';
 
 // The master switch. Read from the settings blob at boot, flipped from the
@@ -1006,6 +1007,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     enqueue(() => runRefresh());
     sendResponse({ ok: true, started: true });
     return;
+  }
+
+  if (message.type === SELF_UPDATE_MESSAGE) {
+    if (!update) {
+      sendResponse({ ok: false });
+      return;
+    }
+    update
+      .check()
+      .then(() => update.stats())
+      .then((stats) => sendResponse({ ok: true, update: stats }))
+      .catch(() => sendResponse({ ok: false }));
+    return true; // async response
   }
 
   if (message.type === RESET_MESSAGE) {

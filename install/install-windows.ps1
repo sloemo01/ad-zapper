@@ -18,8 +18,7 @@ param(
   [switch]$DryRun,
   [switch]$Download,
   [switch]$DownloadOnly,
-  [switch]$UpdateOnly,
-  [switch]$NoAutoUpdate
+  [switch]$UpdateOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +38,24 @@ Say ""
 # folder saying which version is now there. The extension reads that marker and
 # reloads itself into it. Chrome is never touched by this path.
 if ($UpdateOnly) {
+  # Ask for the version first: a few hundred bytes from the API instead of the
+  # whole archive when there is nothing new.
+  $remote = $null
+  try {
+    $remote = (Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/contents/manifest.json?ref=$Ref" -Headers @{ Accept = 'application/vnd.github.raw' } -UseBasicParsing) | ConvertFrom-Json
+  } catch { }
+  if (-not $remote) {
+    try { $remote = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/$Repo/$Ref/manifest.json" -UseBasicParsing).Content | ConvertFrom-Json } catch { }
+  }
+  $oldInstalled = $null
+  $oldManifest = Join-Path $Target 'manifest.json'
+  if (Test-Path $oldManifest) { $oldInstalled = (Get-Content $oldManifest -Raw | ConvertFrom-Json).version }
+  $noopStamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  if ($remote -and $remote.version -and $oldInstalled -and -not ([version]$remote.version -gt [version]$oldInstalled)) {
+    Set-Content -Path (Join-Path $Target 'update.json') -Value "{`"version`": `"$oldInstalled`", `"at`": `"$noopStamp`"}" -Encoding ASCII
+    Say "up to date ($oldInstalled), nothing downloaded"
+    exit 0
+  }
   $tmp = Join-Path $env:TEMP ("ad-zapper-" + [guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Path $tmp | Out-Null
   try {
@@ -189,18 +206,9 @@ Say "     entries. That permission is what lets one layer inspect requests on th
 Say "     that need it. Click Add extension."
 Say "  4. The card appears. Pin the toolbar icon if you want the counter in view."
 Say ""
-if (-not $NoAutoUpdate) {
-  try {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Src 'install\autoupdate-windows.ps1') -Install -Target $Target | Out-Null
-    Say "Auto-update is on. A scheduled task checks github.com/$Repo every 6 hours, and the"
-    Say "extension reloads itself when a newer version has landed on disk."
-  } catch {
-    Say "Auto-update could not be registered. Run install\autoupdate-windows.ps1 -Install to"
-    Say "retry, or -Remove to take it out."
-  }
-} else {
-  Say "Auto-update was skipped (-NoAutoUpdate). install\autoupdate-windows.ps1 -Install adds it."
-}
+Say "To update later, use the update button in the extension, or run this script again with"
+Say "-UpdateOnly. That replaces the folder with the newest version and the extension reloads"
+Say "itself into it."
 Say ""
 Say "Press Enter once the card is showing, and this opens a page to test it on."
 [void](Read-Host)

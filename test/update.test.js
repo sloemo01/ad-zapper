@@ -19,6 +19,7 @@ const vm = require('vm');
 
 const store = {};
 const reloads = [];
+let platform = 'mac';
 let markerResponse = null;
 let latestResponse = null;
 let fetchCalls = [];
@@ -28,7 +29,8 @@ const sandbox = {
     runtime: {
       getManifest: () => ({ version: '2.7.24' }),
       getURL: (file) => `chrome-extension://test/${file}`,
-      reload: () => reloads.push(Date.now())
+      reload: () => reloads.push(Date.now()),
+      getPlatformInfo: async () => ({ os: platform })
     },
     storage: {
       local: {
@@ -162,6 +164,21 @@ const reset = () => {
     const applied = await update.applyIfStaged();
     assert(applied === false, 'an equal version triggered a reload');
     assert(reloads.length === 0, 'an equal version triggered a reload');
+  });
+
+  await check('the button gets a command that matches the platform', async () => {
+    reset();
+    platform = 'mac';
+    let stats = await update.stats();
+    assert(stats.os === 'mac', `os is ${stats.os}`);
+    assert(/install-macos\.sh/.test(stats.command), `mac command looks wrong: ${stats.command}`);
+    assert(/--update-only/.test(stats.command), 'the mac command does not update in place');
+    platform = 'win';
+    stats = await update.stats();
+    assert(stats.os === 'win', `os is ${stats.os}`);
+    assert(/install-windows\.ps1/.test(stats.command), `windows command looks wrong: ${stats.command}`);
+    assert(/-UpdateOnly/.test(stats.command), 'the windows command does not update in place');
+    platform = 'mac';
   });
 
   await check('the alarm is scheduled and the stats have the shape the popup reads', async () => {

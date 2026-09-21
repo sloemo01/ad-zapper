@@ -16,6 +16,7 @@ const PIN_MESSAGE = 'yt-ad-zapper:pin';
 const SETTINGS_MESSAGE = 'yt-ad-zapper:settings';
 const UPDATE_LISTS_MESSAGE = 'yt-ad-zapper:update-lists';
 const POWER_MESSAGE = 'yt-ad-zapper:power';
+const SELF_UPDATE_MESSAGE = 'yt-ad-zapper:self-update';
 
 // The build the browser is actually running. An unpacked extension keeps running
 // the code it was loaded with until someone reloads it, so "did the reload take"
@@ -217,7 +218,30 @@ const renderPower = () => {
   }
 };
 
+const describeUpdate = (info) => {
+  const upd = info && info.update;
+  if (!upd) return 'Update state unknown.';
+  if (upd.stuck) {
+    return `The new version ${upd.stuck} is in the folder, but Chrome is still running ${upd.running}. Reload the extension from chrome://extensions.`;
+  }
+  if (upd.staged) return `${upd.staged} is installed. Reload the extension to move onto it.`;
+  if (upd.newer) return `${upd.latest} is available, you are on ${upd.running}.`;
+  if (upd.checkedAt) return `Up to date (${upd.running}), checked ${sinceText(upd.checkedAt)}.`;
+  return `You are on ${upd.running}.`;
+};
+
+const renderUpdate = () => {
+  const label = document.getElementById('updater');
+  const button = document.getElementById('updateSelf');
+  if (!label || !button) return;
+  const upd = (tabInfo && tabInfo.update) || null;
+  label.textContent = describeUpdate(tabInfo);
+  const ready = upd && (upd.newer || upd.staged);
+  button.textContent = ready ? (upd.latest ? `Update to ${upd.latest}` : 'Update') : 'Check for updates';
+};
+
 const renderSystem = () => {
+  renderUpdate();
   const node = document.getElementById('system');
   if (!node) return;
   const text = describeSystem(tabInfo);
@@ -270,6 +294,34 @@ const render = async () => {
   renderPower();
   await renderDeep();
 };
+
+const updateSelfButton = document.getElementById('updateSelf');
+if (updateSelfButton) {
+  updateSelfButton.addEventListener('click', async () => {
+    const upd = (tabInfo && tabInfo.update) || null;
+    const label = document.getElementById('updater');
+    if (upd && (upd.newer || upd.staged) && upd.command) {
+      // The button cannot install anything itself: an extension has no way to
+      // write files into the folder Chrome loaded it from. So it hands over the
+      // one command that does, and the extension reloads into the result.
+      try {
+        await navigator.clipboard.writeText(upd.command);
+        if (label) label.textContent = 'Command copied. Paste it in Terminal; this page reloads itself when the new files land.';
+      } catch (_) {
+        if (label) label.textContent = `Copy this and run it: ${upd.command}`;
+      }
+      return;
+    }
+    if (label) label.textContent = 'Asking GitHub…';
+    try {
+      const reply = await chrome.runtime.sendMessage({ type: SELF_UPDATE_MESSAGE, action: 'check' });
+      if (reply && reply.update) tabInfo = { ...(tabInfo || {}), update: reply.update };
+      renderUpdate();
+    } catch (_) {
+      if (label) label.textContent = 'The check did not get an answer.';
+    }
+  });
+}
 
 const powerButton = document.getElementById('power');
 if (powerButton) {
