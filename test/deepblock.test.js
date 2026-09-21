@@ -944,6 +944,19 @@ const check = async (name, fn) => {
     assert(!calls.slice(before).some((call) => call.op === 'attach'), 'the debugger was touched anyway');
   });
 
+  await check('a pin outranks the ledger, but not the page-world rule', async () => {
+    sandbox.AdblockerSmart.deepVerdict = realVerdict;
+    await sandbox.AdblockerSmart.deepEvent('pinned.test', { deepSessions: 3 });
+    const demoted = await sandbox.AdblockerSmart.deepVerdict('pinned.test');
+    deep.setPinned(['pinned.test']);
+    const attached = await deep.attach(7788, 'https://pinned.test/page', 'pinned');
+    await deep.detach(7788, 'test');
+    deep.setPinned([]);
+    sandbox.AdblockerSmart.deepVerdict = async () => ({ attach: true, why: 'test' });
+    assert(/no benefit/.test(demoted.why), `the ledger did not demote the host: ${demoted.why}`);
+    assert(attached === true, 'a pinned host the ledger demoted was refused anyway');
+  });
+
   console.log(results.join('\n'));
 
 const failed = results.filter((line) => line.startsWith('FAIL'));

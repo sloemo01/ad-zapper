@@ -443,7 +443,11 @@ const attach = async (tabId, url, reason) => {
     // was on the walled list only because it carries response rules, which was
     // quietly forcing a CDP session there on every visit.
     const pageWorld = api.isPageWorldHost ? api.isPageWorldHost(host) : false;
-    if (pageWorld || !suffixHit(host, walledHosts)) {
+    // A pin is an instruction from the person using the browser, so it outranks
+    // the ledger. It does not outrank the page-world rule: those hosts are
+    // handled before any request exists, and a pin on one is a pin on nothing.
+    const pinnedHere = suffixHit(host, pinned);
+    if (pageWorld || (!pinnedHere && !suffixHit(host, walledHosts))) {
       const verdict = await api.deepVerdict(host);
       if (!verdict.attach) {
         diagAdd({ k: 'attach-skipped', host, why: verdict.why });
