@@ -122,6 +122,8 @@ vm.createContext(sandbox);
 // surface too, so the stand-in carries the whole shape as no-ops.
 sandbox.self.AdblockerDeep = {
   isWalledHost: (host) => /(^|\.)bild\.de$/i.test(String(host || '')),
+  isPageWorldHost: (host) =>
+    !!(sandbox.self.AdblockerSmart && sandbox.self.AdblockerSmart.isPageWorldHost(host)),
   ensureEngine: async () => true,
   setSettings: () => {},
   setPinned: () => {},
@@ -153,6 +155,11 @@ vm.runInContext(popupHosts, sandbox, { filename: 'popup-hosts.js' });
 // The generated wall-host list rides src/deepblock.js in the real worker. Here
 // the deep block is a fake, so the list is loaded on its own, or the carve-out
 // has nothing to carve and the check that guards it passes on an empty list.
+// The real page-world list decides which hosts keep the rule sets' blocking, so
+// the stand-in deep block answers with the real one instead of a copy of it.
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'smart.js'), 'utf8'), sandbox, {
+  filename: 'smart.js'
+});
 vm.runInContext(wallHosts, sandbox, { filename: 'wall-hosts.js' });
 vm.runInContext(source, sandbox, { filename: 'background.js' });
 
@@ -496,7 +503,7 @@ const assert = (condition, message) => {
     assert(answer.enabled === true || answer.enabled === false, 'the probe answered without a switch state');
     assert(answer.walledHosts >= 1, 'the probe answered without the walled hosts');
     assert(
-      typeof answer.allowRules === 'number' && answer.allowRules >= 11,
+      typeof answer.allowRules === 'number' && answer.allowRules >= 8,
       `the probe reported ${answer.allowRules} allow rule(s)`
     );
     assert(answer.deep && Array.isArray(answer.deep.events), 'the probe carried no decision ring');
