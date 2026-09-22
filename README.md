@@ -8,6 +8,10 @@ Nothing to sign up for. No account, no telemetry, nothing sent anywhere. MIT lic
 
 ![tests](https://github.com/sloemo01/ad-zapper/actions/workflows/ci.yml/badge.svg)
 
+## Video walkthrough
+
+[Four minutes, from the install to the counter moving](https://github.com/sloemo01/ad-zapper/blob/main/docs/ad-zapper-demo.mp4) (10 MB, 720p). The rest of this file covers the same ground in writing.
+
 ## Install
 
 You need Chrome, on a Mac or a PC. Nothing else: no Git, no developer tools, no build step.
