@@ -216,6 +216,15 @@ const deepVerdict = async (host) => {
   // failing to appear.
   const never = self.adZapperNeverAttach;
   if (typeof never === 'function' && never(clean)) return { attach: false, why: 'never attach' };
+  // A walled host is the one place where this layer is the only blocking there is:
+  // the rule sets stand down for those hosts, so refusing a session there does not
+  // mean less blocking, it means none at all. Whatever the ledger thinks it learned
+  // about benefit, the wall defence gets its session.
+  const walled =
+    self.AdblockerDeep &&
+    typeof self.AdblockerDeep.isWalledHost === 'function' &&
+    self.AdblockerDeep.isWalledHost(clean);
+  if (walled) return { attach: true, why: 'wall defence' };
   const records = await readSites();
   const entry = records[clean];
   if (!entry) return { attach: true, why: 'unknown host' };

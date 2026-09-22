@@ -204,6 +204,22 @@ const assert = (condition, message) => {
     assert(/no benefit/.test(verdict.why), `got "${verdict.why}"`);
   });
 
+  await check('a walled host keeps its session even after useless ones', async () => {
+    await smart.deepEvent('wall.example', { deepSessions: 3 });
+    const withoutWall = await smart.deepVerdict('wall.example');
+    assert(withoutWall.attach === false, 'the ledger should refuse a host with no benefit');
+    // Same record, now a host the wall defence owns: the rules stand down there, so
+    // a refusal is not "less blocking", it is none at all.
+    // the suite's sandbox has its own `self`, which is what the module reads
+    sandbox.self.AdblockerDeep = { isWalledHost: (host) => String(host).endsWith('wall.example') };
+    const verdict = await smart.deepVerdict('wall.example');
+    assert(verdict.attach === true, 'the wall defence was refused a session');
+    assert(verdict.why === 'wall defence', `got "${verdict.why}"`);
+    delete sandbox.self.AdblockerDeep;
+    const again = await smart.deepVerdict('wall.example');
+    assert(again.attach === false, 'the exemption outlived the wall');
+  });
+
   await check('one answered request buys the session back', async () => {
     await smart.deepEvent('costly.example', { deepBenefit: 1 });
     const verdict = await smart.deepVerdict('costly.example');
