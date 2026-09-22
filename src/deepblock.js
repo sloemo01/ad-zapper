@@ -512,8 +512,11 @@ const attach = async (tabId, url, reason) => {
   }
   if (sessions.size >= MAX_ATTACHED) return false;
 
+  // The retry guard exists so a tab that keeps failing does not hammer the debugger.
+  // A walled host is the one case where a second attempt is worth it on its own: the
+  // wall document is already in flight, and nothing else on that host can block it.
   const lastAttempt = attempts.get(tabId) || 0;
-  if (Date.now() - lastAttempt < RETRY_MS) return false;
+  if (Date.now() - lastAttempt < RETRY_MS && !suffixHit(host, walledHosts)) return false;
 
   const ready = await loadEngine();
   if (!ready) {
@@ -642,6 +645,10 @@ const watchNavigations = () => {
       if (details.frameId !== 0) return; // the top frame is the document that walls
       const tabId = details.tabId;
       if (typeof tabId !== 'number' || tabId < 0) return;
+      // Warm the engine on the way in. On a cold start the hydrate costs seconds,
+      // and the first visit to a walled site can lose the race to its own document
+      // request, which reads as "it did not attach on its own".
+      if (suffixHit(hostOf(details.url), walledHosts)) loadEngine().catch(() => {});
       maybeAttach(tabId, details.url).catch(() => {});
     });
     return true;
