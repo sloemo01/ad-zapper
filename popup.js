@@ -224,7 +224,7 @@ const describeUpdate = (info) => {
   if (upd.stuck) {
     return `The new version ${upd.stuck} is in the folder, but Chrome is still running ${upd.running}. Reload the extension from chrome://extensions.`;
   }
-  if (upd.staged) return `${upd.staged} is installed. Reload the extension to move onto it.`;
+  if (upd.staged) return `${upd.staged} is installed; the extension reloads into it by itself.`;
   if (upd.newer) return `${upd.latest} is available, you are on ${upd.running}.`;
   if (upd.checkedAt) return `Up to date (${upd.running}), checked ${sinceText(upd.checkedAt)}.`;
   return `You are on ${upd.running}.`;
