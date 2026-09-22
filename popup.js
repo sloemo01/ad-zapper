@@ -239,8 +239,9 @@ const renderUpdate = () => {
   if (!label || !button) return;
   const upd = (tabInfo && tabInfo.update) || null;
   label.textContent = describeUpdate(tabInfo);
-  const ready = upd && (upd.newer || upd.staged);
-  button.textContent = ready ? (upd.latest ? `Update to ${upd.latest}` : 'Update') : 'Check for updates';
+  // One button, one job: the click checks and, when there is something newer, installs
+  // it. There is no second click to wait for, so the label never has to change.
+  button.textContent = 'Check for updates';
 };
 
 const renderSystem = () => {
@@ -301,45 +302,64 @@ const render = async () => {
 const updateSelfButton = document.getElementById('updateSelf');
 if (updateSelfButton) {
   updateSelfButton.addEventListener('click', async () => {
-    const upd = (tabInfo && tabInfo.update) || null;
     const label = document.getElementById('updater');
-    if (upd && (upd.newer || upd.staged)) {
-      // One click, when the machine has the updater registered: the worker asks the
-      // native host to run the installer, the folder is swapped, and the extension
-      // reloads into it. Without the host, fall back to the command.
-      if (label) label.textContent = 'Updating… a few seconds.';
-      let done = null;
-      try {
-        done = await chrome.runtime.sendMessage({ type: SELF_UPDATE_MESSAGE, action: 'install' });
-      } catch (_) {
-        done = null;
-      }
-      if (done && done.installed) {
-        if (label) label.textContent = `Updated to ${done.version || 'the newest version'}. Reloading…`;
-        if (button) button.textContent = 'Updated';
-        return;
-      }
-      const why = (done && done.why) || '';
-      if (upd.command) {
-        try {
-          await navigator.clipboard.writeText(upd.command);
-          if (label) {
-            label.textContent = `${why ? why + '. ' : ''}Command copied instead: paste it in Terminal, then open this panel again.`;
-          }
-        } catch (_) {
-          if (label) label.textContent = `Copy this and run it: ${upd.command}`;
-        }
-      }
-      return;
-    }
-    if (label) label.textContent = 'Asking GitHub…';
+    const note = (text) => {
+      if (label) label.textContent = text;
+    };
+    updateSelfButton.disabled = true;
+    note('Checking GitHub…');
+
+    let stats = null;
     try {
       const reply = await chrome.runtime.sendMessage({ type: SELF_UPDATE_MESSAGE, action: 'check' });
-      if (reply && reply.update) tabInfo = { ...(tabInfo || {}), update: reply.update };
-      renderUpdate();
+      stats = (reply && reply.update) || null;
     } catch (_) {
-      if (label) label.textContent = 'The check did not get an answer.';
+      stats = null;
     }
+    if (!stats) {
+      note('The check did not get an answer.');
+      updateSelfButton.disabled = false;
+      return;
+    }
+    tabInfo = { ...(tabInfo || {}), update: stats };
+    renderUpdate();
+
+    if (!(stats.newer || stats.staged)) {
+      // Up to date. The line above the button says which version is running.
+      updateSelfButton.disabled = false;
+      return;
+    }
+
+    // Something newer, so install it in this same click. Chrome will not let an
+    // extension write files, so the worker asks the updater registered on this
+    // machine; when that answers, the folder is already swapped and this extension
+    // reloads itself in the background. No extension page, no arrow to click.
+    note('Updating… a few seconds.');
+    let done = null;
+    try {
+      done = await chrome.runtime.sendMessage({ type: SELF_UPDATE_MESSAGE, action: 'install' });
+    } catch (_) {
+      done = null;
+    }
+    if (done && done.installed) {
+      const landed = done.version || 'the newest version';
+      updateSelfButton.textContent = `Updated to ${landed}`;
+      note(`Updated to ${landed}. Reloading in the background; open pages keep working.`);
+      return;
+    }
+
+    const why = (done && done.why) || '';
+    if (stats.command) {
+      try {
+        await navigator.clipboard.writeText(stats.command);
+        note(`${why ? why + '. ' : ''}No updater is registered on this machine, so here is the command: paste it in Terminal, then open this panel again.`);
+      } catch (_) {
+        note(`Copy this and run it: ${stats.command}`);
+      }
+    } else {
+      note(why || 'The update did not run.');
+    }
+    updateSelfButton.disabled = false;
   });
 }
 

@@ -51,9 +51,10 @@ Press Enter in the terminal after that and it opens YouTube so you can watch the
 
 Chrome only updates extensions that came from the Web Store, and this one cannot be in the store,
 so updates are asked for rather than pushed. The button at the bottom of the popup does the asking:
-it checks GitHub on the spot (a few hundred bytes), and when there is something newer it changes to
-**Update to <version>**. Clicking that runs the update in place and the extension reloads itself
-into the new version.
+it checks GitHub on the spot (a few hundred bytes) and, when there is something newer, installs it in
+that same click. The extension then reloads itself into the new version in the background: no
+extension page to visit, no arrow to click, and open tabs keep working. The new build's page scripts
+take over on the next page load.
 
 Chrome does not let an extension write files, so it cannot replace its own folder by itself. The
 installer therefore registers a small helper on the machine (a native messaging host) that can, and
