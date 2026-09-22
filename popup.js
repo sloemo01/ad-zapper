@@ -29,8 +29,11 @@ const stampVersion = () => {
 };
 stampVersion();
 
-// The probe, shown here because reading it from a page needs a debugger on the
-// tab, and the extension needs that same single slot to do its work.
+// The probe reader. No longer surfaced in the panel, by request, so the markup it
+// used to fill is gone and the guards below keep this harmless. The reading itself
+// still exists and still matters: the worker keeps the ring, logs it under the
+// ad-zapper:deep console filter, and answers a yt-ad-zapper:diag message, so the
+// state is reachable from the worker console or by asking the relay from any page.
 const showDiag = () => {
   try {
     chrome.runtime.sendMessage({ type: 'yt-ad-zapper:diag' }, (info) => {
