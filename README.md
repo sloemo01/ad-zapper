@@ -49,7 +49,7 @@ Press Enter in the terminal after that and it opens YouTube so you can watch the
 
 ### Updating
 
-Chrome only updates extensions that came from the Web Store, and this one cannot be in the store,
+Chrome only auto-updates extensions that came from the Web Store, and this one is not listed there,
 so updates are asked for rather than pushed. The button at the bottom of the popup does the asking:
 it checks GitHub on the spot (a few hundred bytes) and, when there is something newer, installs it in
 that same click. The extension then reloads itself into the new version in the background: no
