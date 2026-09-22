@@ -6,7 +6,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -16,7 +16,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -26,7 +26,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -36,7 +36,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -46,7 +46,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -56,7 +56,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -66,7 +66,7 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
     ]
   },
   {
@@ -76,7 +76,77 @@
     "replacement": "\"no_ads\"",
     "flags": "",
     "lists": [
-      "ubo-filters"
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||static.xx.fbcdn.net/rsrc.php/$script,domain=web.facebook.com|www.facebook.com,replace=/return r instanceof ArrayBuffer/return r.constructor.name===\"ArrayBuffer\"/",
+    "matcher": "||static.xx.fbcdn.net/rsrc.php/$script,domain=web.facebook.com|www.facebook.com",
+    "pattern": "return r instanceof ArrayBuffer",
+    "replacement": "return r.constructor.name===\"ArrayBuffer\"",
+    "flags": "",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||static.veevcdn.co/assets/videoplayer/$script,3p,replace=/\\'adblockEnabled\\':[a-zA-Z]{2}/'adblockEnabled':false/g,domain=poophq.com|veev.to|doods.to",
+    "matcher": "||static.veevcdn.co/assets/videoplayer/$script,3p,domain=poophq.com|veev.to|doods.to",
+    "pattern": "\\'adblockEnabled\\':[a-zA-Z]{2}",
+    "replacement": "'adblockEnabled':false",
+    "flags": "g",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||static.veevcdn.co/assets/videoplayer/$script,3p,replace=/return new Promise\\(function\\(.{100,550}?\\]\\[\\'on\\'\\].*?[a-zA-Z]\\;\\}\\)\\[/[/,domain=poophq.com|veev.to|doods.to",
+    "matcher": "||static.veevcdn.co/assets/videoplayer/$script,3p,domain=poophq.com|veev.to|doods.to",
+    "pattern": "return new Promise\\(function\\(.{100,550}?\\]\\[\\'on\\'\\].*?[a-zA-Z]\\;\\}\\)\\[",
+    "replacement": "[",
+    "flags": "",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||static.veevcdn.co/assets/videoplayer/$script,3p,replace=/\\'vavl\\':\\!0x0/'vavl':false/g,domain=poophq.com|veev.to|doods.to",
+    "matcher": "||static.veevcdn.co/assets/videoplayer/$script,3p,domain=poophq.com|veev.to|doods.to",
+    "pattern": "\\'vavl\\':\\!0x0",
+    "replacement": "'vavl':false",
+    "flags": "g",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "*$frame,3p,replace=/adBlockDetected//,from=filemoon.*",
+    "matcher": "*$frame,3p,from=filemoon.*",
+    "pattern": "adBlockDetected",
+    "replacement": "",
+    "flags": "",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||pvpoke-re.com/*.js?v=$replace=/try\\{GameMaster/try{return;GameMaster/",
+    "matcher": "||pvpoke-re.com/*.js?v=",
+    "pattern": "try\\{GameMaster",
+    "replacement": "try{return;GameMaster",
+    "flags": "",
+    "lists": [
+      "quick-fixes"
+    ]
+  },
+  {
+    "filter": "||global.novelpia.com/_nuxt/*.js|$script,replace=/if\\(\\w\\.check_is_ad_free\\(\\)\\)/if(true)/",
+    "matcher": "||global.novelpia.com/_nuxt/*.js|$script",
+    "pattern": "if\\(\\w\\.check_is_ad_free\\(\\)\\)",
+    "replacement": "if(true)",
+    "flags": "",
+    "lists": [
+      "quick-fixes"
     ]
   },
   {

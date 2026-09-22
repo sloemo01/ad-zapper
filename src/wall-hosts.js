@@ -5,5 +5,5 @@
  * that try to wall readers out. src/wall-guard.js loads this in every frame
  * and returns immediately unless the frame is on one of them.
  */
-self.__yazWallHosts = "\nbild.de\ncdn.greenvideo.io\ncdn.player.foundation\ncinema.de\nfacebook.com\ngolem.de\nstatic.xx.fbcdn.net\nsvonm.com\nwelt.de\nwww.youtube.com\nyoutube.com\n";
-self.__yazWallHostCount = 11;
+self.__yazWallHosts = "\nbild.de\ncdn.greenvideo.io\ncdn.player.foundation\ncinema.de\ndailymail.co.uk\ndailymail.com\nfacebook.com\nglobal.novelpia.com\ngolem.de\npvpoke-re.com\nstatic.veevcdn.co\nstatic.xx.fbcdn.net\nsvonm.com\nwelt.de\nwww.youtube.com\nyoutube.com\n";
+self.__yazWallHostCount = 16;

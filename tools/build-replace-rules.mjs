@@ -127,12 +127,23 @@ writeFileSync(outFile, JSON.stringify(rules, null, 2) + '\n');
 // every frame and has to know whether this frame is one of them without asking
 // the worker, so the list ships like the popup host list does: packed, one
 // string, O(1) to reject a host that is not in it.
-const hosts = new Set();
+// Sites that blank the page when they detect blocking, and whose trigger needs no
+// rewrite of our own: the carve-out is what fixes them. Standing the lists down
+// means nothing gets blocked for their detector to see, and the deep layer takes
+// the page instead. dailymail does it with its own paywall script: the DOM keeps
+// all 250k characters of text, every image renders, and the body collapses to a
+// pixel, which is a blank page with the site's blessing.
+const WALL_ONLY_HOSTS = ['dailymail.com', 'dailymail.co.uk'];
+
+const hosts = new Set(WALL_ONLY_HOSTS);
 for (const rule of rules) {
   // The anchor is `||host` followed by `^`, `/`, `$` or the end: not every rule
   // is a bare hostname, and requiring only `^` hid most of these sites.
   const match = /\|\|([a-z0-9][a-z0-9.-]*?)(?=[\^/$]|$)/i.exec(String(rule.filter || rule.matcher || ''));
   if (match) hosts.add(match[1].toLowerCase());
+}
+for (const host of WALL_ONLY_HOSTS) {
+  if (!hosts.has(host)) throw new Error(`wall-only host missing from the generated list: ${host}`);
 }
 const hostList = [...hosts].sort();
 const guardFile = join(root, 'src', 'wall-hosts.js');

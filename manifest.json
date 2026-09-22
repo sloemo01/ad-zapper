@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ad Zapper",
-  "version": "2.7.43",
+  "version": "2.7.44",
   "description": "Blocks ads and trackers on every page from the real filter lists, strips YouTube ad breaks out of the player data, kills popunder windows and ad loaders, hides ad slots everywhere, and rewrites ad-block walls before they render.",
   "minimum_chrome_version": "111",
   "permissions": [
