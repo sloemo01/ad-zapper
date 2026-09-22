@@ -1068,7 +1068,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .nativeUpdate()
         .then(async (result) => {
           if (result && result.ok) {
-            await update.applyIfStaged();
+            // The host answered with the version it installed, so reload on that,
+            // right now. The marker read stays as the fallback path.
+            if (!update.reloadFor(result.version)) await update.applyIfStaged();
             sendResponse({
               ok: true,
               installed: true,

@@ -170,15 +170,36 @@ const reset = () => {
     assert(store.update.lastReloadFor === '2.7.25', 'the reload was not recorded');
   });
 
-  await check('the same marker twice does not reload twice, and is recorded as stuck', async () => {
+  await check('a marker that survives a reload is retried, then written off', async () => {
     reset();
     markerResponse = { version: '2.7.25' };
+    // The reload is not proof it worked: the worker can be torn down between asking
+    // and reloading, so a version that is still staged on the next pass is retried
+    // a few times before it is recorded as stuck. Giving up on the first pass is the
+    // bug this covers: it left updates installed and never loaded.
     await update.applyIfStaged();
+    assert.strictEqual(reloads.length, 1, 'the first pass did not ask for a reload');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await update.applyIfStaged();
+    }
+    assert.strictEqual(reloads.length, 4, `expected three retries, saw ${reloads.length - 1}`);
+    assert.ok(!store.update.stuck, 'recorded as stuck before the attempts ran out');
+    const final = await update.applyIfStaged();
+    assert.strictEqual(final, false, 'it reloaded past the attempt cap');
+    assert.strictEqual(store.update.stuck, '2.7.25', 'a version that never took was not recorded as stuck');
+    assert.strictEqual(reloads.length, 4, 'it kept reloading after being written off');
+  });
+
+  await check('an installed version reloads on the spot, without the marker', async () => {
+    reset();
+    markerResponse = null;
     reloads.length = 0;
-    const again = await update.applyIfStaged();
-    assert(again === false, 'the second attempt reloaded again');
-    assert(reloads.length === 0, `the second attempt reloaded ${reloads.length} time(s)`);
-    assert(store.update.stuck === '2.7.25', 'a version that would not load was not recorded as stuck');
+    assert.strictEqual(update.reloadFor('2.7.90'), true, 'the installed version did not reload');
+    assert.strictEqual(reloads.length, 1, 'no reload was asked for');
+    assert.strictEqual(update.reloadFor('2.7.1'), false, 'an older version reloaded');
+    assert.strictEqual(update.reloadFor('2.7.24'), false, 'the running version reloaded');
+    assert.strictEqual(update.reloadFor(''), false, 'an empty answer reloaded');
+    assert.strictEqual(reloads.length, 1, 'extra reloads were asked for');
   });
 
   await check('a marker that matches the running version is left alone', async () => {

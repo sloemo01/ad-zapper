@@ -163,6 +163,33 @@ const check = async () => {
   return writeState(next);
 };
 
+// Reloading is the last step, so nothing needs to happen after it. It used to run
+// from a 400ms timer, which was long enough for Chrome to tear an idle service
+// worker down, and the state was written first: the marker was then recorded as
+// "asked for" while the reload never ran, and the next pass wrote it off as stuck.
+// Calling it straight away removes that gap, and a version that survives a reload
+// gets a few honest attempts before it is written off.
+const RELOAD_ATTEMPTS = 3;
+
+const requestReload = () => {
+  try {
+    chrome.runtime.reload();
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
+// The updater host reports the version it just put on disk, so the reload does not
+// have to wait for the marker to be read back from the folder. Same click, same
+// answer, no file read in between.
+const reloadFor = (version) => {
+  const clean = String(version || '').trim();
+  if (!clean) return false;
+  if (compareVersions(clean, runningVersion()) <= 0) return false;
+  return requestReload();
+};
+
 const applyIfStaged = async () => {
   const marker = await readMarker();
   if (!marker || !marker.version) return false;
@@ -170,26 +197,25 @@ const applyIfStaged = async () => {
   if (compareVersions(marker.version, running) <= 0) return false;
   const state = await readState();
   if (state.lastReloadFor === marker.version) {
-    // Asked for this version already and still running something older, so the
-    // swap on disk did not take. Say so once and stop trying.
-    if (state.stuck !== marker.version) {
-      await writeState({ ...state, stuck: marker.version, stuckAt: Date.now() });
+    const tries = (state.reloadTries || 0) + 1;
+    if (tries > RELOAD_ATTEMPTS) {
+      if (state.stuck !== marker.version) {
+        await writeState({ ...state, stuck: marker.version, stuckAt: Date.now(), reloadTries: tries });
+      }
+      return false;
     }
-    return false;
+    await writeState({ ...state, reloadTries: tries });
+    return requestReload();
   }
   await writeState({
     ...state,
     lastReloadFor: marker.version,
     lastReloadAt: Date.now(),
     staged: marker.version,
-    stuck: null
+    stuck: null,
+    reloadTries: 0
   });
-  setTimeout(() => {
-    try {
-      chrome.runtime.reload();
-    } catch (_) {}
-  }, 400);
-  return true;
+  return requestReload();
 };
 
 const stats = async () => {
@@ -264,6 +290,7 @@ self.AdblockerUpdate = {
   fetchLatest,
   check,
   applyIfStaged,
+  reloadFor,
   nativeUpdate,
   nativeHost: UPDATE_HOST,
   stats
