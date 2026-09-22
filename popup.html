@@ -17,7 +17,7 @@
   body {
     font: 13px/1.5 system-ui, -apple-system, sans-serif;
     margin: 0;
-    padding: 14px 16px 16px;
+    padding: 10px 14px 12px;
     width: 248px;
     color: var(--ink);
     background: var(--paper);
@@ -208,6 +208,23 @@
       background: var(--wash);
     }
   }
+  /* Chrome caps a popup at 600px tall and puts a scrollbar on the moment the
+     content crosses it. Everything below trims the panel to fit with room to
+     spare, and hides the bar itself as a backstop. */
+  html, body {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  .head { margin-bottom: 7px; }
+  .tally { font-size: 24px; line-height: 1.1; }
+  .label { margin: 1px 0 8px; }
+  .detail { margin: 0 0 4px; }
+  .meta { margin: 0 0 3px; }
+  .deep { padding: 8px 10px; }
+  .ghost { margin: 0 0 4px; }
 </style>
 </head>
 <body>
