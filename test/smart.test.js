@@ -123,7 +123,7 @@ const assert = (condition, message) => {
     assert(smart.normalizeHost('') === '', 'an empty host should stay empty');
   });
 
-  await check('remembers a site and calls it hot once it has form', async () => {
+  await check('remembers a site and calls it hot once it has a record', async () => {
     await smart.forgetSites();
     const fresh = await smart.scoreSite('vfxmed.com');
     assert(fresh.hot === false, 'a brand new site should not be hot');

@@ -211,6 +211,11 @@ const deepVerdict = async (host) => {
   const clean = normalizeHost(host);
   if (!clean) return { attach: false, why: 'no host' };
   if (isPageWorldHost(clean)) return { attach: false, why: 'page-world' };
+  // The work-site list lives in deepblock.js, which owns the attach gate. Asking it
+  // here too means the panel can name the reason instead of the session quietly
+  // failing to appear.
+  const never = self.adZapperNeverAttach;
+  if (typeof never === 'function' && never(clean)) return { attach: false, why: 'never attach' };
   const records = await readSites();
   const entry = records[clean];
   if (!entry) return { attach: true, why: 'unknown host' };

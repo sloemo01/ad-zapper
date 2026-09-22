@@ -320,6 +320,10 @@ const neverAttach = (host) => {
   return NEVER_ATTACH.some((base) => clean === base || clean.endsWith('.' + base));
 };
 
+// The verdict layer (smart.js) asks the same question before it spends a slot on a
+// host, so the popup can say why instead of quietly refusing at the last moment.
+self.adZapperNeverAttach = neverAttach;
+
 const isAttachable = (url) => {
   const value = String(url || '');
   if (!value) return false;

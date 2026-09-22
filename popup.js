@@ -139,11 +139,13 @@ const describeDeep = (info) => {
     return `Deep block is <b>on</b> for this tab${count}`;
   }
   if (info.verdict && info.verdict.attach === false) {
+    if (info.verdict.why === 'never attach') return 'Deep block never attaches here, a site you work in';
+    if (info.verdict.why === 'page-world') return 'Deep block is skipped here, page-world';
     return `Deep block is skipped here, ${info.verdict.why}`;
   }
   if (info.pinned) return 'Deep block is <b>armed</b> for this site';
   if (!info.engineReady) return 'Deep block is warming up';
-  if (info.site && info.site.hot) return 'Deep block will <b>kick in</b> here: this site has form';
+  if (info.site && info.site.hot) return 'Deep block will <b>kick in</b> here: this site has pulled ads before';
   return 'Deep block is on standby';
 };
 
