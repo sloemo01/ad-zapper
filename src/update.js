@@ -5,10 +5,15 @@
  * Chrome will never update it, and no API exists to ask. What is possible is the
  * two halves below, which together amount to the same thing:
  *
- *   1. The update button in the popup hands over the installer's --update-only
- *      command. That path asks for the version first, fetches the source only when
- *      it is newer, and swaps the folder. It writes update.json into the folder as
- *      the last step, so the folder itself can say which version it now holds.
+ *   1. The update button in the popup asks the machine's native updater host to
+ *      run the installer's --update-only path. Chrome will not let an extension
+ *      write files, so the extension cannot replace its own folder, but a native
+ *      messaging host can. That path asks for the version first, fetches the
+ *      source only when it is newer, and swaps the folder. It writes update.json
+ *      into the folder as the last step, so the folder can say what it holds.
+ *
+ *      When no host is registered (Chrome throws on connectNative), the button
+ *      falls back to putting the same command on the clipboard.
  *
  *   2. The extension reads that marker through chrome.runtime.getURL, and when it
  *      names a version newer than the one running, it calls chrome.runtime.reload.
@@ -202,6 +207,55 @@ const stats = async () => {
   };
 };
 
+const UPDATE_HOST = 'com.sloemo.ad_zapper_updater';
+const NATIVE_WAIT_MS = 120000;
+
+// One request, one reply: the host runs the installer and answers with the version
+// it installed. Chrome starts the host process itself; connecting to a host that
+// was never registered throws, which is the signal to fall back to the command.
+const nativeUpdate = () =>
+  new Promise((resolve) => {
+    let port = null;
+    try {
+      if (!chrome.runtime || !chrome.runtime.connectNative) {
+        resolve({ ok: false, why: 'this Chrome will not talk to a native host' });
+        return;
+      }
+      port = chrome.runtime.connectNative(UPDATE_HOST);
+    } catch (error) {
+      resolve({ ok: false, why: 'no updater is registered on this machine' });
+      return;
+    }
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      try {
+        if (port) port.disconnect();
+      } catch (_) {}
+      resolve(result);
+    };
+    try {
+      if (port.onMessage && port.onMessage.addListener) {
+        port.onMessage.addListener((message) => {
+          if (message && typeof message === 'object') finish(message);
+          else finish({ ok: false, why: 'the updater sent an odd reply' });
+        });
+      }
+      if (port.onDisconnect && port.onDisconnect.addListener) {
+        port.onDisconnect.addListener(() => {
+          const last = chrome.runtime.lastError && chrome.runtime.lastError.message;
+          finish({ ok: false, why: last || 'the updater stopped talking' });
+        });
+      }
+      port.postMessage({ cmd: 'update' });
+    } catch (error) {
+      finish({ ok: false, why: String((error && error.message) || error) });
+      return;
+    }
+    setTimeout(() => finish({ ok: false, why: 'the updater did not answer in time' }), NATIVE_WAIT_MS);
+  });
+
 self.AdblockerUpdate = {
   markerFile: UPDATE_MARKER,
   compareVersions,
@@ -210,5 +264,7 @@ self.AdblockerUpdate = {
   fetchLatest,
   check,
   applyIfStaged,
+  nativeUpdate,
+  nativeHost: UPDATE_HOST,
   stats
 };

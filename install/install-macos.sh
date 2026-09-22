@@ -36,6 +36,22 @@ done
 
 say() { printf '%s\n' "$*"; }
 
+# The extension cannot write files, so it cannot replace the folder Chrome loaded.
+# This registers a small native host that can: the update button asks it to run the
+# --update-only path above, then the extension reads the marker and reloads into it.
+register_native_host() {
+  local dir="$1"
+  [[ -n "${AD_ZAPPER_NO_NATIVE_HOST:-}" ]] && return 0
+  local script="$dir/install/native-host/register-macos.sh"
+  [[ -f "$script" ]] || return 0
+  if AD_ZAPPER_DIR="$dir" bash "$script" >/dev/null 2>&1; then
+    say "native updater registered for $dir"
+  else
+    say "native updater not registered; the update button will copy a command instead"
+  fi
+  return 0
+}
+
 say "Ad Zapper installer"
 
 # --update-only is what the background job runs: fetch the newest source, compare
@@ -91,6 +107,7 @@ PY
   rm -rf "$TARGET"
   mv "$INNER" "$TARGET"
   printf '{"version": "%s", "at": "%s"}\n' "$NEW" "$stamp" > "$TARGET/update.json"
+  register_native_host "$TARGET"
   say "updated ${OLD:-nothing} -> $NEW"
   exit 0
 fi
@@ -171,6 +188,8 @@ if [[ $MODE == "download-only" ]]; then
   say "  $SRC"
   exit 0
 fi
+
+register_native_host "$SRC"
 
 # 3. Chrome
 CHROME="/Applications/Google Chrome.app"

@@ -23,6 +23,8 @@ let platform = 'mac';
 let markerResponse = null;
 let latestResponse = null;
 let fetchCalls = [];
+let nativeMode = 'unsupported';
+const nativeCalls = [];
 
 const sandbox = {
   chrome: {
@@ -30,7 +32,28 @@ const sandbox = {
       getManifest: () => ({ version: '2.7.24' }),
       getURL: (file) => `chrome-extension://test/${file}`,
       reload: () => reloads.push(Date.now()),
-      getPlatformInfo: async () => ({ os: platform })
+      getPlatformInfo: async () => ({ os: platform }),
+      lastError: undefined,
+      connectNative: (name) => {
+        nativeCalls.push(name);
+        if (nativeMode === 'missing') throw new Error('Specified native messaging host not found.');
+        const listeners = { message: [], disconnect: [] };
+        return {
+          onMessage: { addListener: (fn) => listeners.message.push(fn) },
+          onDisconnect: { addListener: (fn) => listeners.disconnect.push(fn) },
+          postMessage: (payload) => {
+            nativeCalls.push(payload);
+            if (nativeMode === 'answer') {
+              listeners.message.forEach((fn) => fn({ ok: true, version: '2.7.90', target: '/tmp/ad zapper', seconds: 2.5 }));
+            }
+            if (nativeMode === 'drop') {
+              sandbox.chrome.runtime.lastError = { message: 'Native host has exited.' };
+              listeners.disconnect.forEach((fn) => fn());
+            }
+          },
+          disconnect: () => {}
+        };
+      }
     },
     storage: {
       local: {
@@ -197,6 +220,48 @@ const reset = () => {
     const stats = await update.stats();
     assert(stats.running === '2.7.24', `running is ${stats.running}`);
     assert(stats.newer === true && stats.staged === '2.7.25', `stats look wrong: ${JSON.stringify(stats)}`);
+  });
+
+  await check('a registered updater is asked to run the installer', async () => {
+    nativeMode = 'answer';
+    nativeCalls.length = 0;
+    const result = await update.nativeUpdate();
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.version, '2.7.90');
+    assert.strictEqual(nativeCalls[0], update.nativeHost);
+    // cross-realm object: compare the field, not the prototype chain
+    assert.strictEqual(nativeCalls[1] && nativeCalls[1].cmd, 'update');
+  });
+
+  await check('a host that stops talking is reported, not swallowed', async () => {
+    nativeMode = 'drop';
+    const result = await update.nativeUpdate();
+    assert.strictEqual(result.ok, false);
+    assert.ok(/exited|stopped talking/i.test(result.why), result.why);
+  });
+
+  await check('a host that says nothing is given up on', async () => {
+    nativeMode = 'silent';
+    const result = await update.nativeUpdate();
+    assert.strictEqual(result.ok, false);
+    assert.ok(/in time/i.test(result.why), result.why);
+  });
+
+  await check('no host registered ends in the command fallback', async () => {
+    nativeMode = 'missing';
+    const result = await update.nativeUpdate();
+    assert.strictEqual(result.ok, false);
+    assert.ok(/registered/i.test(result.why), result.why);
+  });
+
+  await check('a Chrome without native messaging says so instead of throwing', async () => {
+    const saved = sandbox.chrome.runtime.connectNative;
+    delete sandbox.chrome.runtime.connectNative;
+    nativeMode = 'unsupported';
+    const result = await update.nativeUpdate();
+    sandbox.chrome.runtime.connectNative = saved;
+    assert.strictEqual(result.ok, false);
+    assert.ok(/native host/i.test(result.why), result.why);
   });
 
   const failed = results.filter((line) => line.startsWith('FAIL'));

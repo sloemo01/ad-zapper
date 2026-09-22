@@ -52,8 +52,18 @@ Press Enter in the terminal after that and it opens YouTube so you can watch the
 Chrome only updates extensions that came from the Web Store, and this one cannot be in the store,
 so updates are asked for rather than pushed. The button at the bottom of the popup does the asking:
 it checks GitHub on the spot (a few hundred bytes), and when there is something newer it changes to
-**Update to <version>**. Clicking it copies the one command that does the work, so the whole update
-is paste, Enter, done.
+**Update to <version>**. Clicking that runs the update in place and the extension reloads itself
+into the new version.
+
+Chrome does not let an extension write files, so it cannot replace its own folder by itself. The
+installer therefore registers a small helper on the machine (a native messaging host) that can, and
+the button talks to it. If the helper is not registered, the button copies the one command instead,
+and the update is a paste and an Enter. To register or remove the helper by hand:
+
+    bash install/native-host/register-macos.sh              # register
+    bash install/native-host/register-macos.sh --remove     # unregister
+
+On Windows it is `install\native-host\register-windows.ps1`, with `-Remove` to take it back out.
 
 The button is the only thing that checks. Nothing in this extension runs on a timer, and no request
 leaves it unless you clicked, which also means no update message will ever appear on its own. What

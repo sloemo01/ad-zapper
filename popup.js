@@ -300,15 +300,32 @@ if (updateSelfButton) {
   updateSelfButton.addEventListener('click', async () => {
     const upd = (tabInfo && tabInfo.update) || null;
     const label = document.getElementById('updater');
-    if (upd && (upd.newer || upd.staged) && upd.command) {
-      // The button cannot install anything itself: an extension has no way to
-      // write files into the folder Chrome loaded it from. So it hands over the
-      // one command that does, and the extension reloads into the result.
+    if (upd && (upd.newer || upd.staged)) {
+      // One click, when the machine has the updater registered: the worker asks the
+      // native host to run the installer, the folder is swapped, and the extension
+      // reloads into it. Without the host, fall back to the command.
+      if (label) label.textContent = 'Updating… a few seconds.';
+      let done = null;
       try {
-        await navigator.clipboard.writeText(upd.command);
-        if (label) label.textContent = `Command copied. Paste it in Terminal, then open this panel again: it finishes the update and reloads itself.`;
+        done = await chrome.runtime.sendMessage({ type: SELF_UPDATE_MESSAGE, action: 'install' });
       } catch (_) {
-        if (label) label.textContent = `Copy this and run it: ${upd.command}`;
+        done = null;
+      }
+      if (done && done.installed) {
+        if (label) label.textContent = `Updated to ${done.version || 'the newest version'}. Reloading…`;
+        if (button) button.textContent = 'Updated';
+        return;
+      }
+      const why = (done && done.why) || '';
+      if (upd.command) {
+        try {
+          await navigator.clipboard.writeText(upd.command);
+          if (label) {
+            label.textContent = `${why ? why + '. ' : ''}Command copied instead: paste it in Terminal, then open this panel again.`;
+          }
+        } catch (_) {
+          if (label) label.textContent = `Copy this and run it: ${upd.command}`;
+        }
       }
       return;
     }

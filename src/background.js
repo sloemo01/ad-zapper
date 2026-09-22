@@ -1014,6 +1014,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: false });
       return;
     }
+    if (message.action === 'install') {
+      // The button wants the update done, not described. Ask the native host to run
+      // the installer, then read the marker it wrote: if the folder holds something
+      // newer than what is running, this reloads straight into it. The worker often
+      // dies here mid-reload, which is the point, so a silent reply is normal.
+      update
+        .nativeUpdate()
+        .then(async (result) => {
+          if (result && result.ok) {
+            await update.applyIfStaged();
+            sendResponse({
+              ok: true,
+              installed: true,
+              version: result.version || null,
+              target: result.target || null
+            });
+            return;
+          }
+          sendResponse({
+            ok: true,
+            installed: false,
+            why: (result && result.why) || 'the updater did not run'
+          });
+        })
+        .catch(() => sendResponse({ ok: false, installed: false }));
+      return true; // async response
+    }
     update
       .check()
       .then(() => update.applyIfStaged())

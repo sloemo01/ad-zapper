@@ -87,6 +87,7 @@ if ($UpdateOnly) {
     if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
     Move-Item $inner.FullName $Target
     Set-Content -Path (Join-Path $Target 'update.json') -Value "{""version"": ""$newVersion"", ""at"": ""$stamp""}" -Encoding ASCII
+    Register-NativeHost $Target
     Say "updated $oldVersion -> $newVersion"
   } finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
@@ -142,6 +143,22 @@ if ($DryRun) {
   Say "1/4  using the checkout at $Src"
 }
 
+# The extension cannot write files, so it cannot replace the folder Chrome loaded.
+# This registers a small native host that can: the update button asks it to run the
+# -UpdateOnly path above, then the extension reads the marker and reloads into it.
+function Register-NativeHost([string]$Dir) {
+  if ($env:AD_ZAPPER_NO_NATIVE_HOST) { return }
+  $script = Join-Path $Dir 'install\native-host\register-windows.ps1'
+  if (-not (Test-Path $script)) { return }
+  try {
+    $env:AD_ZAPPER_DIR = $Dir
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $script | Out-Null
+    Say "native updater registered for $Dir"
+  } catch {
+    Say "native updater not registered; the update button will copy a command instead"
+  }
+}
+
 # 2. The folder has to be a working extension
 if ($DryRun) {
   Say "2/4  dry run: manifest and rule sets left unchecked."
@@ -165,6 +182,8 @@ if ($DownloadOnly) {
   Say "  $Src"
   exit 0
 }
+
+Register-NativeHost $Src
 
 # 3. Chrome
 $candidates = @(
