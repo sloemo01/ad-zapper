@@ -29,6 +29,42 @@ const stampVersion = () => {
 };
 stampVersion();
 
+// What the folder on disk holds, next to what is running. When the two differ, the
+// build in front of you is the one Chrome loaded, and the number will not move until
+// the extension reloads. Saying both numbers is the only honest way to show that,
+// and the button is the manual version of the same call the updater makes.
+const stampFolder = async () => {
+  const running = (() => {
+    try {
+      return chrome.runtime.getManifest().version;
+    } catch (_) {
+      return '';
+    }
+  })();
+  let onDisk = '';
+  try {
+    const response = await fetch(`${chrome.runtime.getURL('manifest.json')}?running=${running}`, { cache: 'no-store' });
+    if (response && response.ok) onDisk = (await response.json()).version || '';
+  } catch (_) {}
+  if (!running || !onDisk || onDisk === running) return;
+  const el = document.getElementById('version');
+  if (el) el.textContent = `build ${running} · folder ${onDisk}`;
+  const button = document.getElementById('reloadSelf');
+  if (!button) return;
+  button.textContent = `Reload into ${onDisk}`;
+  button.style.display = '';
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    button.textContent = 'Reloading…';
+    try {
+      chrome.runtime.reload();
+    } catch (_) {
+      button.disabled = false;
+    }
+  });
+};
+stampFolder();
+
 // The probe reader. No longer surfaced in the panel, by request, so the markup it
 // used to fill is gone and the guards below keep this harmless. The reading itself
 // still exists and still matters: the worker keeps the ring, logs it under the
