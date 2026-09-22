@@ -20,8 +20,8 @@ set -euo pipefail
 
 REPO="sloemo01/ad-zapper"
 REF="main"
-REV="installer rev 3, 2026-09-22"
-TARGET="${AD_ZAPPER_DIR:-$HOME/Applications/Ad Zapper}"
+REV="installer rev 4, 2026-09-22"
+TARGET="${AD_ZAPPER_DIR:-$HOME/Downloads/Ad Zapper}"
 
 MODE="install"
 for arg in "$@"; do

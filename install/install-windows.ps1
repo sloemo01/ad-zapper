@@ -24,8 +24,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $Repo = 'sloemo01/ad-zapper'
 $Ref = 'main'
-$Rev = 'installer rev 3, 2026-09-22'
-$Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:LOCALAPPDATA 'Ad Zapper' }
+$Rev = 'installer rev 4, 2026-09-22'
+$Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:USERPROFILE 'Downloads\Ad Zapper' }
 
 function Say($message) { Write-Host $message }
 

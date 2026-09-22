@@ -39,8 +39,8 @@ folder.
 
 ### What the script does
 
-It downloads the extension into a folder that stays put (`~/Applications/Ad Zapper` on macOS,
-`%LOCALAPPDATA%\Ad Zapper` on Windows), checks that every file is there and that the filter files
+It downloads the extension into a folder that stays put (`~/Downloads/Ad Zapper` on macOS,
+`%USERPROFILE%\Downloads\Ad Zapper` on Windows), checks that every file is there and that the filter files
 parse, copies the folder path to your clipboard, and opens Chrome's extension page. Chrome then
 needs four clicks from you:
 

@@ -7,9 +7,9 @@ param([switch]$Remove)
 
 $ErrorActionPreference = 'Stop'
 $HostName = 'com.sloemo.ad_zapper_updater'
-$Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:LOCALAPPDATA 'Ad Zapper' }
+$Target = if ($env:AD_ZAPPER_DIR) { $env:AD_ZAPPER_DIR } else { Join-Path $env:USERPROFILE 'Downloads\Ad Zapper' }
 $HostCmd = Join-Path $Target 'install\native-host\ad-zapper-host.cmd'
-$Manifest = Join-Path $env:LOCALAPPDATA 'Ad Zapper\native-host\com.sloemo.ad_zapper_updater.json'
+$Manifest = Join-Path $Target 'native-host\com.sloemo.ad_zapper_updater.json'
 $ExtensionId = if ($env:AD_ZAPPER_EXTENSION_ID) { $env:AD_ZAPPER_EXTENSION_ID } else { 'cpphobhbpoecbnicbeajhdcdkjdmahjf' }
 $Key = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts\' + $HostName
 

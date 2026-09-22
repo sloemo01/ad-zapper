@@ -13,7 +13,7 @@
 set -euo pipefail
 
 HOST_NAME='com.sloemo.ad_zapper_updater'
-TARGET="${AD_ZAPPER_DIR:-$HOME/Applications/Ad Zapper}"
+TARGET="${AD_ZAPPER_DIR:-$HOME/Downloads/Ad Zapper}"
 HOST="$TARGET/install/native-host/ad-zapper-host.py"
 CHROME_DIR="$HOME/Library/Application Support/Google/Chrome"
 SUPPORT_DIR="$CHROME_DIR/NativeMessagingHosts"
