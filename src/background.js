@@ -1175,7 +1175,12 @@ const HIDING_FILES = ['src/cosmetic.css', 'src/generic-cosmetic.css'];
 // a blocker however the requests went: on those hosts the slot is left in the
 // layout (empty, because the requests are answered) and only the site-specific
 // sheet is applied.
-const WALLED_HIDING_FILES = ['src/cosmetic.css'];
+// On those hosts nothing is hidden at all. The site-specific sheet carries the
+// same kind of selectors as the generic one (ad-slot, dfp-ad, [data-ad-name], and
+// on the Mail, .billboard-container, which is the Mail's own banner wrapper), and
+// a hidden wrapper is the one thing a measuring detector is guaranteed to see.
+// Empty slots in the layout cost less than a blank page.
+const WALLED_HIDING_FILES = [];
 
 // The learned sheet is this extension's own guesswork, so it never lands on the
 // hosts everything depends on. A wrong guess there costs more than any ad.
@@ -1246,6 +1251,7 @@ const runDetect = async (tabId, url) => {
 const injectHiding = async (tabId, frameIds, url) => {
   if (!power || typeof tabId !== 'number') return false;
   const files = isWalledUrl(url) ? WALLED_HIDING_FILES : HIDING_FILES;
+  if (!files.length) return false;
   const target = frameIds && frameIds.length ? { tabId, frameIds } : { tabId, allFrames: true };
   try {
     await chrome.scripting.insertCSS({ target, files });

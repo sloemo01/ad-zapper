@@ -554,19 +554,13 @@ const assert = (condition, message) => {
     );
   });
 
-  await check('a walled host is not given the all-sites hiding stylesheet', async () => {
+  await check('a walled host is given no hiding stylesheet at all', async () => {
     const before = cssInserts.length;
     committedListener({ tabId: 9, frameId: 0, url: 'https://www.bild.de/politik/' });
     await settle();
-    const walledInsert = cssInserts[cssInserts.length - 1];
-    assert(cssInserts.length === before + 1, 'a walled frame got no stylesheet at all');
     assert(
-      (walledInsert.files || []).includes('src/cosmetic.css'),
-      'the site-specific stylesheet was dropped for a walled host'
-    );
-    assert(
-      !(walledInsert.files || []).includes('src/generic-cosmetic.css'),
-      'the all-sites stylesheet was injected on a walled host, which is the cosmetic tell'
+      cssInserts.length === before,
+      'a walled host got a stylesheet anyway, and a hidden wrapper is exactly what its detector measures'
     );
 
     const ordinary = cssInserts.length;
