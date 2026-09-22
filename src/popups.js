@@ -25,6 +25,12 @@
 (() => {
   'use strict';
 
+  // Sites Ad Zapper does not touch: stand down before anything else here runs.
+  // The manifest excludes these hosts, but a frame can still load us through
+  // match_about_blank, so the check lives here as well.
+  if (self.adZapperIsSkippedHost && self.adZapperIsSkippedHost(location.hostname)) return;
+
+
   const CHANNEL = 'yt-ad-zapper';
   const DEBUG = true;
   const TAG = '[yt-ad-zapper]';

@@ -133,6 +133,7 @@ const renderCounters = async () => {
 
 const describeDeep = (info) => {
   if (!info) return 'Deep block is idle';
+  if (info.skipped) return 'Ad Zapper does not run on this site, by choice';
   if (info.mode === 'off') return 'Deep block is <b>off</b>';
   if (info.attached) {
     const count = info.blockedHere ? `, ${info.blockedHere.toLocaleString()} blocked here` : '';

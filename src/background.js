@@ -37,6 +37,7 @@ try {
 } catch (_) {}
 
 try {
+  importScripts('/src/skip-hosts.js');
   importScripts('/src/smart.js');
   importScripts('/src/detect.js');
   importScripts('/src/update.js');
@@ -228,6 +229,8 @@ const hideFor = async (url) => {
   if (!smart || !deep || !url || !/^https?:/i.test(url)) return empty;
   const host = hostOfUrl(url);
   if (!host) return empty;
+  // Sites Ad Zapper does not touch: no hiding sheet, nothing blocked, nothing counted.
+  if (self.adZapperIsSkippedHost && self.adZapperIsSkippedHost(host)) return empty;
 
   const cached = cosmetics ? cosmetics.get(host) : null;
   if (cached) return cached;
@@ -517,6 +520,7 @@ const tabInfo = async (tabId) => {
     engineReady: !!state.engineReady,
     memory: state.memory || (deep && deep.memory ? deep.memory() : null),
     pinned: host ? pinned.some((entry) => host === entry || host.endsWith('.' + entry)) : false,
+    skipped: !!(self.adZapperIsSkippedHost && self.adZapperIsSkippedHost(host)),
     verdict: smart && smart.deepVerdict && host ? await smart.deepVerdict(host) : null,
     learned: detect ? await detect.stats() : null,
     update: update ? await update.stats() : null,
@@ -768,6 +772,47 @@ const syncWallAllowRules = async () => {
     console.log('[ad-zapper:deep]', `wall carve-out installed for ${hosts.length} host(s)`);
   } catch (err) {
     console.warn(`${TAG} the wall carve-out did not install:`, err && err.message);
+  }
+};
+
+// ---- sites Ad Zapper does not touch -----------------------------------------
+//
+// Standing down is the honest shape for code hosts: there is nothing there to
+// block, and every layer here is capable of changing a page it runs on. The
+// content scripts are excluded in the manifest; this is what stops the rule sets.
+// Same shape as the wall carve-out, at a priority no block rule reaches, and it
+// only ever allows, so leaving it installed while the switch is off is harmless.
+const SKIP_ALLOW_BASE = 9400001;
+
+const syncSkipAllowRules = async () => {
+  const dnr = chrome.declarativeNetRequest;
+  if (!dnr || !dnr.updateDynamicRules || !dnr.getDynamicRules) return;
+  const hosts = (self.adZapperSkipHosts || []).filter((host) => host !== 'localhost' && host !== '127.0.0.1');
+  if (!hosts.length) return;
+  try {
+    const existing = (await dnr.getDynamicRules()) || [];
+    const removeRuleIds = existing
+      .filter((rule) => rule.id >= SKIP_ALLOW_BASE && rule.id < SKIP_ALLOW_BASE + 200)
+      .map((rule) => rule.id);
+    const rules = [];
+    hosts.forEach((host, index) => {
+      rules.push({
+        id: SKIP_ALLOW_BASE + index,
+        priority: 2200,
+        action: { type: 'allow' },
+        condition: { urlFilter: '*', requestDomains: [host] }
+      });
+      rules.push({
+        id: SKIP_ALLOW_BASE + 100 + index,
+        priority: 2200,
+        action: { type: 'allow' },
+        condition: { urlFilter: '*', initiatorDomains: [host] }
+      });
+    });
+    await dnr.updateDynamicRules({ removeRuleIds, addRules: rules });
+    console.log('[ad-zapper:deep]', `standing down on ${hosts.length} host(s)`);
+  } catch (err) {
+    console.warn(`${TAG} the skip rules did not install:`, err && err.message);
   }
 };
 
@@ -1092,6 +1137,9 @@ const boot = () => {
 // one throw away from never running, and a catch-all upstream would have hidden
 // it. The carve-out is the difference between a page seeing failures and seeing
 // answers, so it is not allowed to fail quietly.
+syncSkipAllowRules().catch((err) => {
+  console.warn(`${TAG} the skip rules did not install:`, err && err.message);
+});
 syncWallAllowRules().catch((err) => {
   console.warn('[ad-zapper:deep]', 'the wall carve-out threw:', err && err.message);
 });
@@ -1161,6 +1209,7 @@ let detectLearned = 0;
 
 const runDetect = async (tabId, url) => {
   if (!power || !detect || !chrome.scripting || typeof tabId !== 'number') return;
+  if (self.adZapperIsSkippedUrl && self.adZapperIsSkippedUrl(url)) return;
   if (!/^https?:/i.test(String(url || ''))) return;
   if (detectSeen.get(tabId) === url) return;
   detectSeen.set(tabId, url);

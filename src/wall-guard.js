@@ -23,6 +23,12 @@
 (() => {
   'use strict';
 
+  // Sites Ad Zapper does not touch: stand down before anything else here runs.
+  // The manifest excludes these hosts, but a frame can still load us through
+  // match_about_blank, so the check lives here as well.
+  if (self.adZapperIsSkippedHost && self.adZapperIsSkippedHost(location.hostname)) return;
+
+
   const LIST = typeof self.__yazWallHosts === 'string' ? self.__yazWallHosts : '\n';
   const WALL_PATH = /adblockwall|adblock-wall|werbeblocker/i;
   // The same family src/wall-main.js refuses to write: RodoGuard's `_fa_`,
