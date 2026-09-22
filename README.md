@@ -115,9 +115,21 @@ fetched fresh from the repository, so you get the newest version.
 
 ### Why it is not in the Chrome Web Store
 
-Google does not allow the Debugger permission in store listings, and that permission is what makes
-the hardest sites work. So the extension installs unpacked instead, which is what those four clicks
-are for.
+Because nobody has submitted it. It is built to be loaded unpacked from a folder you own, which is
+what those four clicks are for.
+
+The Debugger permission is not the obstacle, and this README said it was until it was pointed out
+that Google's own documentation says otherwise. `chrome.debugger` is one of the documented
+exceptions to the no-remote-code rule (developer.chrome.com, "Deal with remote hosted code
+violations", section "Is there any workaround?"), allowed precisely because it cannot hide:
+
+> While it is being used, the user will see a warning bar at the top of the window. If the banner is
+> closed or dismissed, the debugging session will be terminated.
+
+Extensions that use it are on the store today. What the permission does cost is that banner, on the
+tab, whenever a session is open, and that is a real cost on a site you visit often. Only two things
+here use it (response rewriting on walled hosts, and per-request handling), and both are skipped on
+everything else.
 
 ## How it works
 
@@ -478,8 +490,9 @@ The same four checks are answered here with global rules instead, in
 `tools/lists/curated-rules.txt` (two ad script path patterns) and `src/generic-cosmetic.css` (two
 ad container class names). Those are the broadest rules in the build, they exist because those
 checks exercise them, and they are documented as such rather than hidden in a list.
-- The `debugger` permission is why this build would not pass Chrome Web Store review, and the
-  CDP attach is detectable by page scripts that look for it.
+- The `debugger` permission is allowed by policy (a documented exception, see above), and the
+  attach is still detectable by page scripts that look for CDP, with the banner as the visible
+  part of it.
 - Only one person has run this in a real browser. Everything in the test suites is Node with
   fakes; the hiding injection, the IndexedDB cache, the alarms, the DNR rules as Chrome matches
   them, and the response rewriting have never been exercised by a real Chrome.
