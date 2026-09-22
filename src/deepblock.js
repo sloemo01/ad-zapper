@@ -660,6 +660,48 @@ const watchNavigations = () => {
 watchNavigations();
 
 /*
+ * Adopt the tabs that already exist.
+ *
+ * onBeforeNavigate and onCommitted only fire for navigations, so a tab that was
+ * already open when the extension was loaded, reloaded, or woken up is never
+ * offered a session. That reads as "I removed it and added it back and it still
+ * does not attach": the tab on screen predates the extension. The active tab of
+ * each window is the one being looked at, and it costs one query to offer it.
+ */
+const adoptTab = async (tabId) => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab || typeof tab.url !== 'string' || !isAttachable(tab.url)) return false;
+    if (sessions.has(tabId)) return true;
+    return await maybeAttach(tabId, tab.url);
+  } catch (_) {
+    return false;
+  }
+};
+
+if (chrome.tabs && chrome.tabs.onActivated) {
+  chrome.tabs.onActivated.addListener((info) => {
+    if (!info || typeof info.tabId !== 'number' || info.tabId < 0) return;
+    adoptTab(info.tabId).catch(() => {});
+  });
+}
+
+const adoptActiveTabs = async () => {
+  try {
+    const tabs = await chrome.tabs.query({ active: true });
+    let adopted = 0;
+    for (const tab of tabs) {
+      if (tab && typeof tab.id === 'number' && (await adoptTab(tab.id))) adopted += 1;
+    }
+    return adopted;
+  } catch (_) {
+    return 0;
+  }
+};
+
+adoptActiveTabs().catch(() => {});
+
+/*
  * A second chance at the attach.
  *
  * onBeforeNavigate is the right moment (it fires before the document request
@@ -1294,6 +1336,7 @@ self.AdblockerDeep = {
   setPinned,
   setKnownHosts,
   maybeAttach,
+  adoptActiveTabs,
   signalAttach,
   attach,
   detach,

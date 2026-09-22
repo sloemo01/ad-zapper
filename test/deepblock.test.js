@@ -970,6 +970,24 @@ const check = async (name, fn) => {
     assert(attached === true, 'a pinned host the ledger demoted was refused anyway');
   });
 
+  await check('a tab that was already open is adopted, not left behind', async () => {
+    // Attach triggers are navigations, so a tab that predates the extension is never
+    // offered a session unless it is adopted. This is the "I removed it and added it
+    // back and it still does not attach" case, with the tab already on screen.
+    sandbox.AdblockerSmart.deepVerdict = async () => ({ attach: true, why: 'test' });
+    deep.setPinned(['wall.test']);
+    sandbox.chrome.tabs = {
+      get: async (id) => ({ id, url: id === 991 ? 'https://wall.test/' : 'https://github.com/someone/repo' }),
+      query: async () => [{ id: 991 }, { id: 992 }],
+      onActivated: { addListener: () => {} }
+    };
+    const adopted = await deep.adoptActiveTabs();
+    await deep.detach(991, 'test').catch(() => {});
+    deep.setPinned([]);
+    delete sandbox.chrome.tabs;
+    assert(adopted === 1, `adopted ${adopted} tabs, expected the wall one only, work host refused`);
+  });
+
   console.log(results.join('\n'));
 
 const failed = results.filter((line) => line.startsWith('FAIL'));
